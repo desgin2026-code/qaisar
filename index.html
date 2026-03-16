@@ -5894,181 +5894,51 @@ function doParentLogin(){
   const errEl=document.getElementById('parentLoginErr');
   errEl.style.display='none';
   if(!email||!pass){ errEl.style.display='block'; errEl.textContent='❌ أدخل البريد وكلمة المرور'; return; }
-  if(!fbAuth){ errEl.style.display='block'; errEl.textContent='❌ خطأ في الاتصال — تحقق من النت'; return; }
+  if(!fbAuth){ try{ initFirebaseAuth(); }catch(e){} }
+  if(!fbAuth){
+    errEl.style.display='block'; errEl.style.color='var(--warn)';
+    errEl.textContent='⏳ جاري الاتصال... اضغط دخول مرة تانية';
+    return;
+  }
+  errEl.textContent='⏳ جاري التحقق...'; errEl.style.display='block'; errEl.style.color='var(--info)';
   fbAuth.signInWithEmailAndPassword(email,pass)
     .then(cred=>{
+      errEl.style.display='none';
       currentParent=cred.user;
-      // Find student linked to this parent email
-      const student=DB.students.find(s=>s.parentEmail===email||s.phone?.replace(/\D/g,'')===email.replace(/\D/g,''));
-      if(!student){
-        // Try to find by stored parent accounts
-        const parentAccount=(DB.parentAccounts||[]).find(p=>p.email===email);
-        if(parentAccount){
-          const s=DB.students.find(x=>x.id===parentAccount.studentId);
-          if(s){ openParentPortal(s); return; }
-        }
-        errEl.style.display='block';
-        errEl.textContent='❌ لا يوجد طالب مرتبط بهذا الحساب — تواصل مع المدرس';
-        fbAuth.signOut();
-        return;
-      }
-      openParentPortal(student);
+      const parentAccount=(DB.parentAccounts||[]).find(p=>p.email===email);
+      if(parentAccount){ const s=DB.students.find(x=>x.id===parentAccount.studentId); if(s){ openParentPortal(s); return; } }
+      const student=DB.students.find(s=>s.parentEmail===email);
+      if(student){ openParentPortal(student); return; }
+      errEl.style.display='block'; errEl.style.color='var(--danger)';
+      errEl.textContent='❌ لا يوجد طالب مرتبط — تواصل مع المدرس';
+      fbAuth.signOut();
     })
     .catch(e=>{
-      errEl.style.display='block';
-      errEl.textContent='❌ البريد أو كلمة المرور غلط';
+      errEl.style.display='block'; errEl.style.color='var(--danger)';
+      if(e.code==='auth/network-request-failed') errEl.textContent='❌ لا يوجد اتصال بالإنترنت';
+      else if(e.code==='auth/wrong-password'||e.code==='auth/user-not-found'||e.code==='auth/invalid-credential') errEl.textContent='❌ البريد أو كلمة المرور غلط';
+      else errEl.textContent='❌ خطأ — حاول مرة تانية';
     });
 }
 
-function openParentPortal(student){
-  document.getElementById('parentSplash').style.display='none';
-  const app=document.getElementById('parentApp');
-  app.style.display='flex';
-  app.style.flexDirection='column';
-  document.getElementById('parentStudentName').textContent=`👤 ${student.name}`;
-  renderParentOverview(student);
-}
-
-function doParentLogout(){
-  if(fbAuth) fbAuth.signOut();
-  currentParent=null;
-  document.getElementById('parentApp').style.display='none';
-  document.getElementById('parentSplash').style.display='flex';
-  document.getElementById('parentEmail').value='';
-  document.getElementById('parentPass').value='';
-}
-
-function switchParentTab(tab,btn){
-  document.querySelectorAll('#parentApp .inner-tab').forEach(t=>t.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  const student=getParentStudent();
-  if(!student) return;
-  if(tab==='overview') renderParentOverview(student);
-  else if(tab==='attendance') renderParentAttendance(student);
-  else if(tab==='grades') renderParentGrades(student);
-  else if(tab==='payments') renderParentPayments(student);
-  else if(tab==='schedule') renderParentSchedule(student);
-}
-
-function getParentStudent(){
-  if(!currentParent) return null;
-  const email=currentParent.email;
-  const parentAccount=(DB.parentAccounts||[]).find(p=>p.email===email);
-  if(parentAccount) return DB.students.find(x=>x.id===parentAccount.studentId);
-  return DB.students.find(s=>s.parentEmail===email);
-}
-
-function renderParentOverview(student){
-  const div=document.getElementById('parentContent'); if(!div)return;
-  const month=today().slice(0,7);
-  const attendance=DB.attendance.filter(a=>a.studentId===student.id);
-  const pres=attendance.filter(a=>a.status==='present').length;
-  const abs=attendance.filter(a=>a.status==='absent').length;
-  const exams=DB.exams.filter(e=>e.grades?.find(g=>g.studentId===student.id));
-  const avgScore=exams.length?Math.round(exams.reduce((a,e)=>{const g=e.grades.find(x=>x.studentId===student.id);return a+(g?(g.score/e.total)*100:0);},0)/exams.length):0;
-  const paid=DB.payments.filter(p=>p.studentId===student.id&&p.status==='paid');
-  const thisMonthPaid=paid.find(p=>p.month===month);
-  const avatarContent=student.photoData?`<img src="${student.photoData}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`:`<span style="font-size:2rem;font-weight:700;color:#fff;">${student.name.charAt(0)}</span>`;
-
-  div.innerHTML=`
-    <!-- Student Card -->
-    <div style="background:linear-gradient(135deg,#07111f,#162a45);border:2px solid rgba(201,162,39,.4);border-radius:16px;padding:20px;margin-bottom:20px;text-align:center;">
-      <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#8a6e1a,#c9a227);margin:0 auto 12px;overflow:hidden;border:3px solid #c9a227;">${avatarContent}</div>
-      <div style="font-size:1.2rem;font-weight:900;color:var(--gold2);">${student.name}</div>
-      <div style="font-size:.85rem;color:var(--txt2);margin-top:4px;">${student.grade||''} — ${getGroupName(student.groupId)||''}</div>
-      <div style="font-size:.78rem;color:var(--txt3);margin-top:4px;">🔑 ${student.code}</div>
-    </div>
-    <!-- Stats -->
-    <div class="cards-row" style="margin-bottom:20px;">
-      <div class="stat-card green"><span class="stat-icon">✅</span><div class="stat-label">أيام الحضور</div><div class="stat-value green">${pres}</div></div>
-      <div class="stat-card red"><span class="stat-icon">❌</span><div class="stat-label">أيام الغياب</div><div class="stat-value red">${abs}</div></div>
-      <div class="stat-card blue"><span class="stat-icon">📝</span><div class="stat-label">متوسط الدرجات</div><div class="stat-value blue">${avgScore}%</div></div>
-      <div class="stat-card ${thisMonthPaid?'green':'red'}"><span class="stat-icon">💰</span><div class="stat-label">رسوم هذا الشهر</div><div class="stat-value ${thisMonthPaid?'green':'red'}">${thisMonthPaid?'✅ مدفوع':'❌ لم يُسدَّد'}</div></div>
-    </div>
-    <!-- Recent attendance -->
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;">
-      <div class="section-title">📅 آخر 5 أيام حضور</div>
-      ${attendance.slice(-5).reverse().map(a=>`
-        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(26,48,80,.3);font-size:.85rem;">
-          <span>${fmtDate(a.date)}</span>
-          <span class="${a.status==='present'?'pay-status-paid':'pay-status-late'}">${a.status==='present'?'✅ حاضر':'❌ غائب'}</span>
-        </div>`).join('')||'<div style="color:var(--txt3);font-size:.85rem;">لا سجلات بعد</div>'}
-    </div>
-    <!-- Notes from teacher -->
-    ${(DB.notes||[]).filter(n=>n.studentId===student.id).length?`
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
-      <div class="section-title">📋 ملاحظات المدرس</div>
-      ${(DB.notes||[]).filter(n=>n.studentId===student.id).slice(-3).map(n=>`
-        <div style="padding:8px 0;border-bottom:1px solid rgba(26,48,80,.3);font-size:.85rem;">
-          <div style="color:var(--txt2);font-size:.75rem;">${fmtDate(n.date)}</div>
-          <div>${n.text||n.note||''}</div>
-        </div>`).join('')}
-    </div>`:''}`;
-}
-
-function renderParentAttendance(student){
-  const div=document.getElementById('parentContent'); if(!div)return;
-  const att=[...DB.attendance.filter(a=>a.studentId===student.id)].sort((a,b)=>b.date.localeCompare(a.date));
-  const pres=att.filter(a=>a.status==='present').length;
-  const abs=att.filter(a=>a.status==='absent').length;
-  div.innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
-      <div class="stat-card green"><div class="stat-label">✅ إجمالي الحضور</div><div class="stat-value green">${pres} يوم</div></div>
-      <div class="stat-card red"><div class="stat-label">❌ إجمالي الغياب</div><div class="stat-value red">${abs} يوم</div></div>
-    </div>
-    ${att.length?`<div class="table-wrapper"><table class="data-table"><thead><tr><th>التاريخ</th><th>الحالة</th></tr></thead><tbody>${
-      att.map(a=>`<tr><td>${fmtDate(a.date)}</td><td><span class="badge ${a.status==='present'?'badge-green':'badge-red'}">${a.status==='present'?'✅ حاضر':'❌ غائب'}</span></td></tr>`).join('')
-    }</tbody></table></div>`:'<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-txt">لا سجلات بعد</div></div>'}`;
-}
-
-function renderParentGrades(student){
-  const div=document.getElementById('parentContent'); if(!div)return;
-  const exams=DB.exams.filter(e=>e.grades?.find(g=>g.studentId===student.id)).sort((a,b)=>b.date.localeCompare(a.date));
-  div.innerHTML=exams.length?`<div class="table-wrapper"><table class="data-table"><thead><tr><th>الامتحان</th><th>التاريخ</th><th>الدرجة</th><th>النسبة</th><th>التقييم</th></tr></thead><tbody>${
-    exams.map(e=>{
-      const g=e.grades.find(x=>x.studentId===student.id);
-      const pct=g?Math.round((g.score/e.total)*100):0;
-      const ev=pct>=90?'ممتاز':pct>=75?'جيد جداً':pct>=60?'جيد':pct>=50?'مقبول':'يحتاج مراجعة';
-      const col=pct>=75?'var(--success)':pct>=50?'var(--warn)':'var(--danger)';
-      return `<tr><td style="font-weight:700">${e.name}</td><td>${fmtDate(e.date)}</td><td style="font-weight:700;color:var(--gold2)">${g?.score||0}/${e.total}</td><td>${pct}%</td><td style="color:${col};font-weight:700">${ev}</td></tr>`;
-    }).join('')
-  }</tbody></table></div>`:`<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-txt">لا امتحانات مسجلة بعد</div></div>`;
-}
-
-function renderParentPayments(student){
-  const div=document.getElementById('parentContent'); if(!div)return;
-  const pays=[...DB.payments.filter(p=>p.studentId===student.id)].sort((a,b)=>b.month.localeCompare(a.month));
-  const total=pays.filter(p=>p.status==='paid').reduce((s,p)=>s+Number(p.amount||0),0);
-  div.innerHTML=`
-    <div class="stat-card green" style="margin-bottom:16px;"><div class="stat-label">💰 إجمالي المدفوع</div><div class="stat-value green">${fmtMoney(total)}</div></div>
-    ${pays.length?`<div class="table-wrapper"><table class="data-table"><thead><tr><th>الشهر</th><th>المبلغ</th><th>التاريخ</th><th>الحالة</th></tr></thead><tbody>${
-      pays.map(p=>`<tr><td>${p.month}</td><td style="font-weight:700">${fmtMoney(p.amount)}</td><td>${fmtDate(p.date)}</td><td><span class="badge ${p.status==='paid'?'badge-green':p.status==='partial'?'badge-warn':'badge-red'}">${p.status==='paid'?'✅ مدفوع':p.status==='partial'?'⚠️ جزئي':'❌ متأخر'}</span></td></tr>`).join('')
-    }</tbody></table></div>`:`<div class="empty-state"><div class="empty-icon">💰</div><div class="empty-txt">لا مدفوعات مسجلة</div></div>`}`;
-}
-
-function renderParentSchedule(student){
-  const div=document.getElementById('parentContent'); if(!div)return;
-  const schedule=(DB.schedule||[]).filter(s=>s.groupId===student.groupId);
-  const days=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-  div.innerHTML=schedule.length?`<div class="table-wrapper"><table class="data-table"><thead><tr><th>اليوم</th><th>الوقت</th><th>القاعة</th></tr></thead><tbody>${
-    schedule.sort((a,b)=>days.indexOf(a.day)-days.indexOf(b.day)).map(s=>`<tr><td style="font-weight:700;color:var(--gold2)">${s.day}</td><td>🕐 ${s.time||'—'}</td><td>${s.room||'—'}</td></tr>`).join('')
-  }</tbody></table></div>`:`<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-txt">لا جدول مسجل بعد</div></div>`;
-}
-
-// Add parent account management to admin
 function openAddParentAccount(studentId){
   const s=DB.students.find(x=>x.id===studentId); if(!s)return;
-  document.getElementById('modalTitle').textContent=`👨‍👩‍👦 إنشاء حساب ولي أمر — ${s.name}`;
+  const existing=(DB.parentAccounts||[]).find(p=>p.studentId===studentId);
+  document.getElementById('modalTitle').textContent=`👨‍👩‍👦 حساب ولي أمر — ${s.name}`;
   document.getElementById('modalBody').innerHTML=`
-    <div style="background:rgba(41,128,185,.1);border:1px solid rgba(41,128,185,.3);border-radius:10px;padding:14px;margin-bottom:16px;font-size:.83rem;color:var(--txt2);">
-      💡 سيتم إنشاء حساب لولي أمر الطالب <strong style="color:var(--gold2)">${s.name}</strong> — يدخل بالإيميل وكلمة المرور دي
+    ${existing?`<div style="background:rgba(39,174,96,.1);border:1px solid rgba(39,174,96,.3);border-radius:10px;padding:12px;margin-bottom:12px;font-size:.83rem;">
+      ✅ حساب موجود — البريد: <strong style="color:var(--gold2)">${existing.email}</strong>
+      <br><button class="btn btn-xs btn-success" style="margin-top:8px;" onclick="sendParentCredentialsWA('${studentId}','${existing.email}','')">📲 إرسال البيانات على واتساب</button>
+    </div>`:''}
+    <div style="background:rgba(41,128,185,.1);border:1px solid rgba(41,128,185,.3);border-radius:10px;padding:12px;margin-bottom:12px;font-size:.83rem;color:var(--txt2);">
+      💡 ادخل إيميل وكلمة مرور لولي أمر <strong style="color:var(--gold2)">${s.name}</strong>
     </div>
     <div class="form-row">
-      <div class="form-group full"><label class="form-label">البريد الإلكتروني لولي الأمر *</label><input class="form-input" id="parentAccEmail" type="email" placeholder="example@gmail.com" dir="ltr" value="${s.parentEmail||''}"></div>
-      <div class="form-group"><label class="form-label">كلمة المرور *</label><input class="form-input" id="parentAccPass" type="text" placeholder="مثال: 12345678" value="${s.code||''}"></div>
+      <div class="form-group full"><label class="form-label">البريد الإلكتروني *</label><input class="form-input" id="parentAccEmail" type="email" placeholder="example@gmail.com" dir="ltr" value="${existing?.email||s.parentEmail||''}"></div>
+      <div class="form-group"><label class="form-label">كلمة المرور *</label><input class="form-input" id="parentAccPass" type="text" placeholder="6 أحرف على الأقل" value="${s.code||''}"></div>
       <div class="form-group"><label class="form-label">تأكيد كلمة المرور</label><input class="form-input" id="parentAccPass2" type="text" placeholder="نفس كلمة المرور"></div>
     </div>`;
-  document.getElementById('modalFooter').innerHTML=`<button class="btn btn-primary" onclick="createParentAccount('${studentId}')">✅ إنشاء الحساب</button><button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>`;
+  document.getElementById('modalFooter').innerHTML=`<button class="btn btn-primary" onclick="createParentAccount('${studentId}')">✅ إنشاء / تحديث</button><button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>`;
   document.getElementById('modalOverlay').classList.add('show');
 }
 
@@ -6078,42 +5948,55 @@ function createParentAccount(studentId){
   const pass2=document.getElementById('parentAccPass2').value.trim();
   if(!email||!pass){showToast('أدخل الإيميل وكلمة المرور','error');return;}
   if(pass!==pass2){showToast('كلمة المرور غير متطابقة','error');return;}
-  if(!fbAuth){showToast('Firebase Auth غير متاح','error');return;}
-
+  if(pass.length<6){showToast('كلمة المرور لازم تكون 6 أحرف على الأقل','error');return;}
+  const s=DB.students.find(x=>x.id===studentId);
+  const saveAndNotify=()=>{
+    DB.parentAccounts=DB.parentAccounts||[];
+    const existing=DB.parentAccounts.findIndex(p=>p.studentId===studentId);
+    const account={id:uid(),studentId,email,createdAt:new Date().toISOString(),createdBy:currentUser?.name};
+    if(existing>-1) DB.parentAccounts[existing]=account;
+    else DB.parentAccounts.push(account);
+    if(s) s.parentEmail=email;
+    saveDB();
+    logActivity('إنشاء حساب ولي أمر',`${s?.name} - ${email}`);
+    document.getElementById('modalTitle').textContent='✅ تم إنشاء الحساب';
+    document.getElementById('modalBody').innerHTML=`
+      <div style="text-align:center;padding:16px 0;">
+        <div style="font-size:3rem;margin-bottom:10px;">✅</div>
+        <div style="font-weight:700;color:var(--success);margin-bottom:14px;">تم إنشاء حساب ولي أمر ${s?.name}</div>
+        <div style="background:var(--bg3);border-radius:10px;padding:14px;text-align:right;">
+          <div style="font-size:.85rem;margin-bottom:6px;">📧 البريد: <strong style="color:var(--gold2);">${email}</strong></div>
+          <div style="font-size:.85rem;">🔑 كلمة المرور: <strong style="color:var(--gold2);">${pass}</strong></div>
+        </div>
+      </div>`;
+    document.getElementById('modalFooter').innerHTML=`
+      <button class="btn btn-success" onclick="sendParentCredentialsWA('${studentId}','${email}','${pass}')">📲 إرسال على واتساب</button>
+      <button class="btn btn-secondary" onclick="closeModal()">إغلاق</button>`;
+  };
+  if(!fbAuth){ saveAndNotify(); showToast('✅ تم الحفظ','success'); return; }
   fbAuth.createUserWithEmailAndPassword(email,pass)
-    .then(cred=>{
-      // Save parent account link
-      DB.parentAccounts=DB.parentAccounts||[];
-      const existing=DB.parentAccounts.findIndex(p=>p.studentId===studentId);
-      const account={id:uid(),studentId,email,createdAt:new Date().toISOString(),createdBy:currentUser?.name};
-      if(existing>-1) DB.parentAccounts[existing]=account;
-      else DB.parentAccounts.push(account);
-      // Also save email on student
-      const s=DB.students.find(x=>x.id===studentId);
-      if(s) s.parentEmail=email;
-      saveDB();
-      closeModal();
-      showToast(`✅ تم إنشاء حساب ولي أمر ${s?.name} — الإيميل: ${email}`,'success');
-      logActivity('إنشاء حساب ولي أمر',`${s?.name} - ${email}`);
-    })
+    .then(()=>saveAndNotify())
     .catch(e=>{
-      if(e.code==='auth/email-already-in-use'){
-        // Link existing account
-        DB.parentAccounts=DB.parentAccounts||[];
-        const s=DB.students.find(x=>x.id===studentId);
-        DB.parentAccounts.push({id:uid(),studentId,email,createdAt:new Date().toISOString()});
-        if(s) s.parentEmail=email;
-        saveDB(); closeModal();
-        showToast(`✅ تم ربط الحساب الموجود بالطالب ${s?.name}`,'success');
-      } else {
-        showToast('خطأ: '+e.message,'error');
-      }
+      if(e.code==='auth/email-already-in-use'||e.code==='auth/network-request-failed') saveAndNotify();
+      else showToast('خطأ: '+e.message,'error');
     });
 }
 
-function showParentLoginWithCheck(){
-  showParentLogin();
+function sendParentCredentialsWA(studentId, email, pass){
+  const s=DB.students.find(x=>x.id===studentId); if(!s)return;
+  const phone=s.phone;
+  if(!phone){showToast('لا يوجد رقم هاتف لولي الأمر','warning');return;}
+  const center=DB.settings.centerName||'سنتر القيصر';
+  const siteUrl='qaisar-center.netlify.app';
+  const msg=`السلام عليكم 🌟\n\n*${center}*\n\nتم إنشاء حسابك على بوابة أولياء الأمور لمتابعة ابنك *${s.name}* 👨‍👩‍👦\n\n🔗 رابط البرنامج:\n${siteUrl}\n\n📧 البريد:\n${email}\n\n🔑 كلمة المرور:\n${pass||'كلمة المرور التي تم تحديدها'}\n\n*خطوات الدخول:*\n١. افتح الرابط\n٢. اضغط "دخول ولي الأمر"\n٣. أدخل البريد وكلمة المرور\n\nتقدر تتابع: ✅ الحضور | 📝 الدرجات | 💰 المدفوعات | 📅 الجدول\n\nللمساعدة تواصل معنا 🙏`;
+  const clean=phone.replace(/\D/g,'').replace(/^0/,'');
+  const waPhone=clean.startsWith('2')?clean:'2'+clean;
+  window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg.replace(/\\n/g,'\n'))}`, '_blank');
+  closeModal();
+  showToast('✅ تم فتح واتساب','success');
 }
+
+
 
 let deferredInstallPrompt=null;
 
