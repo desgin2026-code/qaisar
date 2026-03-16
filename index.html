@@ -3340,7 +3340,10 @@ function sendBulkStudentsMsg(){
   const rows=students.map((s,i)=>{
     const personalMsg=text.replace('{اسم الطالب}',s.name).replace('{الاسم}',s.name);
     const cleanPhone=s.studentPhone.replace(/\D/g,'').replace(/^0/,'');
-    const waPhone=cleanPhone.startsWith('2')?cleanPhone:'2'+cleanPhone;
+    let waPhone;
+      if(cleanPhone.startsWith('20')) waPhone=cleanPhone;
+      else if(cleanPhone.startsWith('0')) waPhone='2'+cleanPhone;
+      else waPhone='20'+cleanPhone;
     const waLink=`https://wa.me/${waPhone}?text=${encodeURIComponent(personalMsg)}`;
     return `<tr>
       <td style="font-weight:700">${i+1}. ${s.name}</td>
@@ -3402,7 +3405,10 @@ function sendBulkMsg(){
   const rows=students.map((s,i)=>{
     const personalMsg=text.replace('{اسم الطالب}',s.name).replace('{الاسم}',s.name);
     const cleanPhone=s.phone.replace(/\D/g,'').replace(/^0/,'');
-    const waPhone=cleanPhone.startsWith('2')?cleanPhone:'2'+cleanPhone;
+    let waPhone;
+      if(cleanPhone.startsWith('20')) waPhone=cleanPhone;
+      else if(cleanPhone.startsWith('0')) waPhone='2'+cleanPhone;
+      else waPhone='20'+cleanPhone;
     const waLink=`https://wa.me/${waPhone}?text=${encodeURIComponent(personalMsg)}`;
     return `<tr>
       <td style="font-weight:700">${i+1}. ${s.name}</td>
@@ -3438,7 +3444,10 @@ function sendAllSequential(students, text){
     const s=students[index];
     const personalMsg=text.replace('{اسم الطالب}',s.name).replace('{الاسم}',s.name);
     const cleanPhone=s.phone.replace(/\D/g,'').replace(/^0/,'');
-    const waPhone=cleanPhone.startsWith('2')?cleanPhone:'2'+cleanPhone;
+    let waPhone;
+      if(cleanPhone.startsWith('20')) waPhone=cleanPhone;
+      else if(cleanPhone.startsWith('0')) waPhone='2'+cleanPhone;
+      else waPhone='20'+cleanPhone;
     window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(personalMsg)}`,'_blank');
     count++;
     setTimeout(()=>sendNext(index+1), 1000);
@@ -4446,7 +4455,10 @@ function doSendAllBarcodes(target){
     if((target==='student'||target==='both')&&s.studentPhone) phones.push(s.studentPhone);
     phones.forEach(ph=>{
       const clean=ph.replace(/\D/g,'').replace(/^0/,'');
-      const waPhone=clean.startsWith('2')?clean:'2'+clean;
+      let waPhone;
+      if(clean.startsWith('20')) waPhone=clean;
+      else if(clean.startsWith('0')) waPhone='2'+clean;
+      else waPhone='20'+clean;
       window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`,'_blank');
       logCommMessage(s.id,ph,'barcode',msg);
       count++;
@@ -4540,8 +4552,12 @@ function sendWAMsg(phone,type,studentName,extra){
     return;
   }
 
-  const cleanPhone=phone.replace(/\D/g,'').replace(/^0/,'');
-  const waPhone=cleanPhone.startsWith('2')?cleanPhone:'2'+cleanPhone;
+  const cleanPhone=phone.replace(/\D/g,'').replace(/^00/,'');
+  let waPhone;
+  if(cleanPhone.startsWith('20')) waPhone=cleanPhone;
+  else if(cleanPhone.startsWith('0')) waPhone='2'+cleanPhone;
+  else if(cleanPhone.startsWith('2')&&cleanPhone.length===12) waPhone=cleanPhone;
+  else waPhone='20'+cleanPhone;
   window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`,'_blank');
   const s=DB.students.find(x=>x.phone===phone);
   if(s) logCommMessage(s.id,phone,type,msg);
@@ -4552,7 +4568,10 @@ function sendWAManual(studentName, encodedMsg){
   const phoneRaw=document.getElementById('manualPhone')?.value.trim();
   if(!phoneRaw){showToast('أدخل رقم الهاتف','error');return;}
   const clean=phoneRaw.replace(/\D/g,'').replace(/^0/,'');
-  const waPhone=clean.startsWith('2')?clean:'2'+clean;
+  let waPhone;
+      if(clean.startsWith('20')) waPhone=clean;
+      else if(clean.startsWith('0')) waPhone='2'+clean;
+      else waPhone='20'+clean;
   window.open(`https://wa.me/${waPhone}?text=${encodedMsg}`,'_blank');
   // Save phone to student
   const s=DB.students.find(x=>x.name===studentName);
@@ -5566,7 +5585,10 @@ function sendReceiptWA(phone,name,amount,month,receiptNo){
   const center=DB.settings.centerName;
   const msg=`🧾 *إيصال دفع - ${center}*\n\nالطالب: *${name}*\nالشهر: ${month}\nالمبلغ: *${Number(amount).toLocaleString('ar-EG')} ${DB.settings.currency}*\nرقم الإيصال: #${receiptNo}\nالتاريخ: ${fmtDate(today())}\n\nشكراً لثقتكم 🙏`;
   const clean=phone.replace(/\D/g,'').replace(/^0/,'');
-  const waPhone=clean.startsWith('2')?clean:'2'+clean;
+  let waPhone;
+      if(clean.startsWith('20')) waPhone=clean;
+      else if(clean.startsWith('0')) waPhone='2'+clean;
+      else waPhone='20'+clean;
   window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`,'_blank');
 }
 
@@ -6313,7 +6335,10 @@ function sendParentCredentialsWA(studentId, email, pass){
   const siteUrl='qaisar-center.netlify.app';
   const msg=`السلام عليكم 🌟\n\n*${center}*\n\nتم إنشاء حسابك على بوابة أولياء الأمور لمتابعة ابنك *${s.name}* 👨‍👩‍👦\n\n🔗 رابط البرنامج:\n${siteUrl}\n\n📧 البريد الإلكتروني:\n${email}\n\n🔑 كلمة المرور:\n${finalPass||'(كلمة المرور التي تم تحديدها)'}\n\n*خطوات الدخول:*\n١. افتح الرابط\n٢. اضغط "دخول ولي الأمر"\n٣. أدخل البريد وكلمة المرور\n\nمن خلال حسابك تقدر تتابع:\n✅ الحضور والغياب\n📝 نتائج الامتحانات\n💰 حالة المدفوعات\n📅 الجدول الدراسي\n\nللمساعدة تواصل معنا 🙏`;
   const clean=phone.replace(/\D/g,'').replace(/^0/,'');
-  const waPhone=clean.startsWith('2')?clean:'2'+clean;
+  let waPhone;
+      if(clean.startsWith('20')) waPhone=clean;
+      else if(clean.startsWith('0')) waPhone='2'+clean;
+      else waPhone='20'+clean;
   window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`,'_blank');
   closeModal();
   showToast('✅ تم فتح واتساب بالرسالة الجاهزة','success');
