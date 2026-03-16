@@ -971,16 +971,45 @@ function pushToFirebase(){
   if(!fbDB || !fbSyncEnabled) return;
   const now = Date.now();
   fbLastPush = now;
+  // Split large data to avoid Firestore 1MB limit
+  const dbStr = JSON.stringify(DB);
+  if(dbStr.length > 900000){
+    // Too large - save without files
+    const dbLight = {...DB, files:[]};
+    fbDB.collection('centers').doc('qaisar_main').set({
+      db: JSON.stringify(dbLight),
+      updatedAt: now,
+      updatedBy: currentUser?.name || 'unknown',
+      device: navigator.userAgent.slice(0,50),
+      hasFiles: false
+    }).then(()=>{
+      showSyncIndicator('✅ تمت المزامنة (بدون ملفات)');
+    }).catch(e=>{
+      if(e.code==='permission-denied'){
+        showSyncIndicator('⚠️ صلاحيات Firebase — راجع Rules');
+        console.warn('Firebase rules need update');
+      } else {
+        showSyncIndicator('⚠️ فشل الإرسال');
+      }
+    });
+    return;
+  }
   fbDB.collection('centers').doc('qaisar_main').set({
-    db: JSON.stringify(DB),
+    db: dbStr,
     updatedAt: now,
     updatedBy: currentUser?.name || 'unknown',
     device: navigator.userAgent.slice(0,50)
   }).then(()=>{
     showSyncIndicator('✅ تمت المزامنة');
   }).catch(e=>{
-    console.warn('Firebase push error:', e);
-    showSyncIndicator('⚠️ فشل الإرسال - تحقق من الإنترنت');
+    console.warn('Firebase push error:', e.code, e.message);
+    if(e.code==='permission-denied'){
+      showSyncIndicator('🔒 راجع Firestore Rules');
+    } else if(e.code==='unavailable'){
+      showSyncIndicator('📴 لا إنترنت — محفوظ محلياً');
+    } else {
+      showSyncIndicator('⚠️ فشل الإرسال - '+e.code);
+    }
   });
 }
 
@@ -2000,15 +2029,20 @@ function viewExam(id){
 
 function sendExamWA(id){
   const e=DB.exams.find(x=>x.id===id); if(!e)return;
-  let count=0;
+  const withPhone=[];
+  const noPhone=[];
   (e.grades||[]).forEach(g=>{
     const s=DB.students.find(x=>x.id===g.studentId);
-    if(s?.phone){
-      sendWAMsg(s.phone,'grade',s.name,`${g.score} من ${e.total||100} في امتحان "${e.name}"`);
-      count++;
-    }
+    if(!s) return;
+    if(s.phone) withPhone.push({s,g});
+    else noPhone.push(s.name);
   });
-  showToast(`جاري فتح ${count} رسالة واتساب لنتائج الامتحان`,'info');
+  withPhone.forEach((item,i)=>{
+    setTimeout(()=>sendWAMsg(item.s.phone,'grade',item.s.name,`${item.g.score} من ${e.total||100} في امتحان "${e.name}"`),i*800);
+  });
+  let msg=`جاري فتح ${withPhone.length} رسالة واتساب`;
+  if(noPhone.length) msg+=` — ${noPhone.length} طالب بدون رقم: ${noPhone.join('، ')}`;
+  showToast(msg,'info');
 }
 
 function deleteExam(id){
@@ -6004,6 +6038,145 @@ function doParentLogin(){
 
   // ✅ دخول ناجح
   openParentPortal(student);
+}
+
+// ============================================================
+// ========= بوابة أولياء الأمور — الفنكشنز الكاملة ==========
+// ============================================================
+function openParentPortal(student){
+  document.getElementById('parentSplash').style.display='none';
+  const app=document.getElementById('parentApp');
+  app.style.display='flex';
+  document.getElementById('parentStudentName').textContent=`👤 ${student.name}`;
+  // Store current student
+  window._parentStudent=student;
+  renderParentOverview(student);
+}
+
+function doParentLogout(){
+  window._parentStudent=null;
+  document.getElementById('parentApp').style.display='none';
+  document.getElementById('parentSplash').style.display='flex';
+  document.getElementById('parentEmail').value='';
+  document.getElementById('parentPass').value='';
+  document.getElementById('parentLoginErr').style.display='none';
+}
+
+function switchParentTab(tab,btn){
+  document.querySelectorAll('#parentApp .inner-tab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const student=window._parentStudent;
+  if(!student) return;
+  if(tab==='overview') renderParentOverview(student);
+  else if(tab==='attendance') renderParentAttendance(student);
+  else if(tab==='grades') renderParentGrades(student);
+  else if(tab==='payments') renderParentPayments(student);
+  else if(tab==='schedule') renderParentSchedule(student);
+}
+
+function renderParentOverview(student){
+  const div=document.getElementById('parentContent'); if(!div)return;
+  const month=today().slice(0,7);
+  const attendance=DB.attendance.filter(a=>a.studentId===student.id);
+  const pres=attendance.filter(a=>a.status==='present').length;
+  const abs=attendance.filter(a=>a.status==='absent').length;
+  const exams=DB.exams.filter(e=>e.grades?.find(g=>g.studentId===student.id));
+  const avgScore=exams.length?Math.round(exams.reduce((a,e)=>{const g=e.grades.find(x=>x.studentId===student.id);return a+(g?(g.score/e.total)*100:0);},0)/exams.length):0;
+  const paid=DB.payments.filter(p=>p.studentId===student.id&&p.status==='paid');
+  const thisMonthPaid=paid.find(p=>p.month===month);
+  const avatarContent=student.photoData?`<img src="${student.photoData}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`:`<span style="font-size:2rem;font-weight:700;color:#fff;">${student.name.charAt(0)}</span>`;
+  const recentAtt=[...attendance].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+  const notes=(DB.notes||[]).filter(n=>n.studentId===student.id).slice(-3);
+
+  div.innerHTML=`
+    <div style="background:linear-gradient(135deg,#07111f,#162a45);border:2px solid rgba(201,162,39,.4);border-radius:16px;padding:20px;margin-bottom:20px;text-align:center;">
+      <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#8a6e1a,#c9a227);margin:0 auto 12px;overflow:hidden;border:3px solid #c9a227;">${avatarContent}</div>
+      <div style="font-size:1.2rem;font-weight:900;color:var(--gold2);">${student.name}</div>
+      <div style="font-size:.85rem;color:var(--txt2);margin-top:4px;">${student.grade||''} — ${getGroupName(student.groupId)||''}</div>
+      <div style="font-size:.78rem;color:var(--txt3);margin-top:4px;">🔑 ${student.code}</div>
+    </div>
+    <div class="cards-row" style="margin-bottom:20px;">
+      <div class="stat-card green"><span class="stat-icon">✅</span><div class="stat-label">أيام الحضور</div><div class="stat-value green">${pres}</div></div>
+      <div class="stat-card red"><span class="stat-icon">❌</span><div class="stat-label">أيام الغياب</div><div class="stat-value red">${abs}</div></div>
+      <div class="stat-card blue"><span class="stat-icon">📝</span><div class="stat-label">متوسط الدرجات</div><div class="stat-value blue">${avgScore}%</div></div>
+      <div class="stat-card ${thisMonthPaid?'green':'red'}"><span class="stat-icon">💰</span><div class="stat-label">رسوم الشهر</div><div class="stat-value" style="font-size:.85rem;color:${thisMonthPaid?'var(--success)':'var(--danger)'}">${thisMonthPaid?'✅ مدفوع':'❌ لم يُسدَّد'}</div></div>
+    </div>
+    ${recentAtt.length?`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;">
+      <div class="section-title">📅 آخر ${recentAtt.length} أيام</div>
+      ${recentAtt.map(a=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(26,48,80,.3);font-size:.85rem;">
+        <span>${fmtDate(a.date)}</span>
+        <span style="color:${a.status==='present'?'var(--success)':'var(--danger)'};font-weight:700;">${a.status==='present'?'✅ حاضر':'❌ غائب'}</span>
+      </div>`).join('')}
+    </div>`:''}
+    ${notes.length?`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
+      <div class="section-title">📋 ملاحظات المدرس</div>
+      ${notes.map(n=>`<div style="padding:8px 0;border-bottom:1px solid rgba(26,48,80,.3);font-size:.85rem;">
+        <div style="color:var(--txt3);font-size:.75rem;">${fmtDate(n.date||n.createdAt?.slice(0,10))}</div>
+        <div>${n.text||n.note||n.content||''}</div>
+      </div>`).join('')}
+    </div>`:''}`;
+}
+
+function renderParentAttendance(student){
+  const div=document.getElementById('parentContent'); if(!div)return;
+  const att=[...DB.attendance.filter(a=>a.studentId===student.id)].sort((a,b)=>b.date.localeCompare(a.date));
+  const pres=att.filter(a=>a.status==='present').length;
+  const abs=att.filter(a=>a.status==='absent').length;
+  div.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+      <div class="stat-card green"><div class="stat-label">✅ إجمالي الحضور</div><div class="stat-value green">${pres} يوم</div></div>
+      <div class="stat-card red"><div class="stat-label">❌ إجمالي الغياب</div><div class="stat-value red">${abs} يوم</div></div>
+    </div>
+    ${att.length?`<div class="table-wrapper"><table class="data-table">
+      <thead><tr><th>التاريخ</th><th>الحالة</th></tr></thead>
+      <tbody>${att.map(a=>`<tr><td>${fmtDate(a.date)}</td><td><span class="badge ${a.status==='present'?'badge-green':'badge-red'}">${a.status==='present'?'✅ حاضر':'❌ غائب'}</span></td></tr>`).join('')}</tbody>
+    </table></div>`:'<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-txt">لا سجلات بعد</div></div>'}`;
+}
+
+function renderParentGrades(student){
+  const div=document.getElementById('parentContent'); if(!div)return;
+  const exams=DB.exams.filter(e=>e.grades?.find(g=>g.studentId===student.id)).sort((a,b)=>b.date.localeCompare(a.date));
+  div.innerHTML=exams.length?`<div class="table-wrapper"><table class="data-table">
+    <thead><tr><th>الامتحان</th><th>التاريخ</th><th>الدرجة</th><th>النسبة</th><th>التقييم</th></tr></thead>
+    <tbody>${exams.map(e=>{
+      const g=e.grades.find(x=>x.studentId===student.id);
+      const pct=g?Math.round((g.score/e.total)*100):0;
+      const ev=pct>=90?'ممتاز':pct>=75?'جيد جداً':pct>=60?'جيد':pct>=50?'مقبول':'يحتاج مراجعة';
+      const col=pct>=75?'var(--success)':pct>=50?'var(--warn)':'var(--danger)';
+      return `<tr><td style="font-weight:700">${e.name}</td><td>${fmtDate(e.date)}</td><td style="color:var(--gold2);font-weight:700">${g?.score||0}/${e.total}</td><td>${pct}%</td><td style="color:${col};font-weight:700">${ev}</td></tr>`;
+    }).join('')}</tbody>
+  </table></div>`:`<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-txt">لا امتحانات بعد</div></div>`;
+}
+
+function renderParentPayments(student){
+  const div=document.getElementById('parentContent'); if(!div)return;
+  const pays=[...DB.payments.filter(p=>p.studentId===student.id)].sort((a,b)=>b.month.localeCompare(a.month));
+  const total=pays.filter(p=>p.status==='paid').reduce((s,p)=>s+Number(p.amount||0),0);
+  div.innerHTML=`
+    <div class="stat-card green" style="margin-bottom:16px;"><div class="stat-label">💰 إجمالي المدفوع</div><div class="stat-value green">${fmtMoney(total)}</div></div>
+    ${pays.length?`<div class="table-wrapper"><table class="data-table">
+      <thead><tr><th>الشهر</th><th>المبلغ</th><th>التاريخ</th><th>الحالة</th></tr></thead>
+      <tbody>${pays.map(p=>`<tr>
+        <td>${p.month}</td>
+        <td style="font-weight:700">${fmtMoney(p.amount)}</td>
+        <td>${fmtDate(p.date)}</td>
+        <td><span class="badge ${p.status==='paid'?'badge-green':p.status==='partial'?'badge-warn':'badge-red'}">${p.status==='paid'?'✅ مدفوع':p.status==='partial'?'⚠️ جزئي':'❌ متأخر'}</span></td>
+      </tr>`).join('')}</tbody>
+    </table></div>`:`<div class="empty-state"><div class="empty-icon">💰</div><div class="empty-txt">لا مدفوعات بعد</div></div>`}`;
+}
+
+function renderParentSchedule(student){
+  const div=document.getElementById('parentContent'); if(!div)return;
+  const schedule=(DB.schedule||[]).filter(s=>s.groupId===student.groupId);
+  const days=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  div.innerHTML=schedule.length?`<div class="table-wrapper"><table class="data-table">
+    <thead><tr><th>اليوم</th><th>الوقت</th><th>القاعة</th></tr></thead>
+    <tbody>${schedule.sort((a,b)=>days.indexOf(a.day)-days.indexOf(b.day)).map(s=>`<tr>
+      <td style="font-weight:700;color:var(--gold2)">${s.day}</td>
+      <td>🕐 ${s.time||'—'}</td>
+      <td>${s.room||'—'}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`:`<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-txt">لا جدول مسجل بعد</div></div>`;
 }
 
 function openAddParentAccount(studentId){
