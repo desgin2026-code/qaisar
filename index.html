@@ -1048,7 +1048,7 @@ function initDB(){
     notifications:[],files:[],schedule:[],
     employees:[],empAttendance:[],empLeaves:[],
     accounting:[],cashbox:{balance:0,transactions:[]},
-    tasks:[],parentAccounts:[],
+    tasks:[],parentAccounts:[],sentMessages:{},
     settings:{
       centerName:'سنتر القيصر',teacherName:'القيصر أحمد حسن',
       grades:['الأول الإعدادي','الثاني الإعدادي','الثالث الإعدادي',
@@ -4618,9 +4618,15 @@ function sendWAMsg(phone,type,studentName,extra){
 }
 
 function markSent(waPhone, msgType){
-  const sentKey='qaisar_sent_'+(msgType||'general')+'_'+waPhone.replace(/\D/g,'');
-  localStorage.setItem(sentKey, new Date().toISOString());
-  setTimeout(()=>{ applySentMark(waPhone, msgType); }, 300);
+  const type=msgType||'general';
+  const key=type+'_'+waPhone.replace(/\D/g,'');
+
+  // حفظ في DB عشان يتزامن على كل الأجهزة
+  if(!DB.sentMessages) DB.sentMessages={};
+  DB.sentMessages[key]={sentAt:new Date().toISOString(),type,phone:waPhone};
+  saveDB();
+
+  setTimeout(()=>{ applySentMark(waPhone, type); }, 300);
 }
 
 function applySentMark(waPhone, msgType){
@@ -4641,26 +4647,26 @@ function applySentMark(waPhone, msgType){
 }
 
 function checkSentMarks(){
+  if(!DB.sentMessages) return;
   document.querySelectorAll('[id^="sendbtn-"]').forEach(btn=>{
     const parts=btn.id.replace('sendbtn-','').split('-');
     const msgType=parts[0];
     const waPhone=parts.slice(1).join('-');
-    const sentKey='qaisar_sent_'+msgType+'_'+waPhone.replace(/\D/g,'');
-    if(localStorage.getItem(sentKey)) applySentMark(waPhone, msgType);
+    const key=msgType+'_'+waPhone.replace(/\D/g,'');
+    if(DB.sentMessages[key]) applySentMark(waPhone, msgType);
   });
 }
 
 function clearSentMarks(){
+  // مسح علامات الإرسال القديمة من DB (أكتر من يوم)
+  if(!DB.sentMessages) return;
   const now=Date.now();
-  const keysToRemove=[];
-  for(let i=0;i<localStorage.length;i++){
-    const key=localStorage.key(i);
-    if(key&&key.startsWith('qaisar_sent_')){
-      const time=new Date(localStorage.getItem(key)).getTime();
-      if(now-time > 86400000) keysToRemove.push(key);
-    }
-  }
-  keysToRemove.forEach(k=>localStorage.removeItem(k));
+  let changed=false;
+  Object.keys(DB.sentMessages).forEach(key=>{
+    const time=new Date(DB.sentMessages[key].sentAt).getTime();
+    if(now-time > 86400000){ delete DB.sentMessages[key]; changed=true; }
+  });
+  if(changed) saveDB();
 }
 
 function sendWAManual(studentName, encodedMsg){
