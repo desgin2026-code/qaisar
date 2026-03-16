@@ -1984,7 +1984,7 @@ function doSendAttendWA(gid,date,target){
         <td style="font-weight:700">${item.name}</td>
         <td><span class="badge ${item.status==='present'?'badge-green':'badge-red'}">${item.status==='present'?'✅ حاضر':'❌ غائب'}</span></td>
         <td style="font-family:monospace;font-size:.8rem">${item.phone}</td>
-        <td><a href="https://wa.me/${item.wa}?text=${encodeURIComponent(item.msg)}" target="_blank" class="btn btn-xs btn-success" id="sendbtn-${item.wa}" onclick="markSent('${item.wa}')">📲 إرسال</a></td>
+        <td><a href="https://wa.me/${item.wa}?text=${encodeURIComponent(item.msg)}" target="_blank" class="btn btn-xs btn-success" id="sendbtn-attend-${item.wa}" onclick="markSent('${item.wa}','attend')">📲 إرسال</a></td>
       </tr>`).join('')}</tbody>
     </table></div>`;
   document.getElementById('modalFooter').innerHTML=`<button class="btn btn-secondary" onclick="closeModal()">إغلاق</button>`;
@@ -2121,7 +2121,7 @@ function sendExamWA(id){
         <td style="color:var(--gold2);font-weight:700">${item.score}</td>
         <td style="color:${item.pct>=75?'var(--success)':item.pct>=50?'var(--warn)':'var(--danger)'}">${item.pct}%</td>
         <td style="font-family:monospace;font-size:.8rem">${item.phone}</td>
-        <td><a href="https://wa.me/${item.wa}?text=${encodeURIComponent(item.msg)}" target="_blank" class="btn btn-xs btn-success" id="sendbtn-${item.wa}" onclick="markSent('${item.wa}')">📲 إرسال</a></td>
+        <td><a href="https://wa.me/${item.wa}?text=${encodeURIComponent(item.msg)}" target="_blank" class="btn btn-xs btn-success" id="sendbtn-exam-${item.wa}" onclick="markSent('${item.wa}','exam')">📲 إرسال</a></td>
       </tr>`).join('')}</tbody>
     </table></div>`;
   document.getElementById('modalFooter').innerHTML=`<button class="btn btn-secondary" onclick="closeModal()">إغلاق</button>`;
@@ -3466,7 +3466,7 @@ function sendBulkMsg(){
     return `<tr>
       <td style="font-weight:700">${i+1}. ${s.name}</td>
       <td style="font-family:monospace;font-size:.8rem">${s.phone}</td>
-      <td><a href="${waLink}" target="_blank" onclick="logCommMessage('${s.id}','${s.phone}','bulk',\`${personalMsg.replace(/`/g,"'")}\`);saveDB();markSent('${waPhone}');" class="btn btn-xs btn-success" id="sendbtn-${waPhone}">📲 إرسال</a></td>
+      <td><a href="${waLink}" target="_blank" onclick="logCommMessage('${s.id}','${s.phone}','bulk',\`${personalMsg.replace(/`/g,"'")}\`);saveDB();markSent('${waPhone}','bulk');" class="btn btn-xs btn-success" id="sendbtn-bulk-${waPhone}">📲 إرسال</a></td>
     </tr>`;
   }).join('');
 
@@ -4617,18 +4617,15 @@ function sendWAMsg(phone,type,studentName,extra){
   saveDB();
 }
 
-function markSent(waPhone){
-  // حفظ في localStorage عشان يفضل محفوظ
-  const sentKey='qaisar_sent_'+waPhone.replace(/\D/g,'');
+function markSent(waPhone, msgType){
+  const sentKey='qaisar_sent_'+(msgType||'general')+'_'+waPhone.replace(/\D/g,'');
   localStorage.setItem(sentKey, new Date().toISOString());
-
-  setTimeout(()=>{
-    applySentMark(waPhone);
-  },300);
+  setTimeout(()=>{ applySentMark(waPhone, msgType); }, 300);
 }
 
-function applySentMark(waPhone){
-  const btn=document.getElementById('sendbtn-'+waPhone);
+function applySentMark(waPhone, msgType){
+  const id='sendbtn-'+(msgType||'general')+'-'+waPhone;
+  const btn=document.getElementById(id);
   if(btn){
     btn.innerHTML='✅ تم الإرسال';
     btn.style.background='#27ae60';
@@ -4639,34 +4636,31 @@ function applySentMark(waPhone){
     btn.style.fontSize='.82rem';
     btn.style.padding='4px 10px';
     const row=btn.closest('tr');
-    if(row){
-      row.style.background='rgba(39,174,96,.15)';
-      row.style.borderRight='3px solid #27ae60';
-    }
+    if(row){ row.style.background='rgba(39,174,96,.15)'; row.style.borderRight='3px solid #27ae60'; }
   }
 }
 
 function checkSentMarks(){
-  // تطبيق علامات الإرسال المحفوظة على كل الأزرار الموجودة
   document.querySelectorAll('[id^="sendbtn-"]').forEach(btn=>{
-    const waPhone=btn.id.replace('sendbtn-','');
-    const sentKey='qaisar_sent_'+waPhone.replace(/\D/g,'');
-    if(localStorage.getItem(sentKey)){
-      applySentMark(waPhone);
-    }
+    const parts=btn.id.replace('sendbtn-','').split('-');
+    const msgType=parts[0];
+    const waPhone=parts.slice(1).join('-');
+    const sentKey='qaisar_sent_'+msgType+'_'+waPhone.replace(/\D/g,'');
+    if(localStorage.getItem(sentKey)) applySentMark(waPhone, msgType);
   });
 }
 
 function clearSentMarks(){
-  // مسح علامات الإرسال القديمة (أكتر من يوم)
   const now=Date.now();
+  const keysToRemove=[];
   for(let i=0;i<localStorage.length;i++){
     const key=localStorage.key(i);
     if(key&&key.startsWith('qaisar_sent_')){
       const time=new Date(localStorage.getItem(key)).getTime();
-      if(now-time > 86400000) localStorage.removeItem(key);
+      if(now-time > 86400000) keysToRemove.push(key);
     }
   }
+  keysToRemove.forEach(k=>localStorage.removeItem(k));
 }
 
 function sendWAManual(studentName, encodedMsg){
