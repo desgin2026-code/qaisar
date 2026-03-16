@@ -1931,38 +1931,63 @@ function sendAttendWhatsApp(){
 function doSendAttendWA(gid,date,target){
   const students=DB.students.filter(s=>s.groupId===gid);
   const records=DB.attendance.filter(a=>a.groupId===gid&&a.date===date);
-  let count=0;
-  let noPhone=[];
+  const center=DB.settings.centerName;
+  const teacher=DB.settings.teacherName||'الأستاذ';
+  const d=fmtDate(date);
 
-  const sendOne=(idx)=>{
-    if(idx>=students.length){
-      let msg=`✅ تم إرسال ${count} رسالة واتساب`;
-      if(noPhone.length) msg+=`\n⚠️ ${noPhone.length} طالب بدون رقم: ${noPhone.join('، ')}`;
-      showToast(msg,'success');
-      return;
-    }
-    const s=students[idx];
+  // جمع كل الأرقام مع الرسائل
+  const list=[];
+  const noPhone=[];
+
+  students.forEach(s=>{
     const rec=records.find(r=>r.studentId===s.id);
-    const type=rec?.status==='present'?'present':'absent';
+    const status=rec?.status==='present'?'present':'absent';
+    const msg=status==='present'
+      ?`✅ *إشعار حضور - ${center}*\n\nعزيزي ولي أمر الطالب: *${s.name}*\n\nحضر الطالب اليوم ${d} ✅\n\n— ${teacher}`
+      :`❌ *إشعار غياب - ${center}*\n\nعزيزي ولي أمر الطالب: *${s.name}*\n\nغاب الطالب اليوم ${d} ❌\n\nنرجو الاطمئنان عليه.\n\n— ${teacher}`;
 
-    // جمع الأرقام المتاحة
-    const phones=[];
-    if(target==='parent'||target==='both'){
-      if(s.phone) phones.push(s.phone);
+    let added=false;
+    if((target==='parent'||target==='both')&&s.phone){
+      let clean=s.phone.replace(/\D/g,'');
+      let wa=clean.startsWith('20')?clean:clean.startsWith('0')?'2'+clean:'20'+clean;
+      list.push({name:s.name,phone:s.phone,wa,msg,status});
+      added=true;
     }
-    if(target==='student'||target==='both'){
-      if(s.studentPhone) phones.push(s.studentPhone);
+    if((target==='student'||target==='both')&&s.studentPhone){
+      let clean=s.studentPhone.replace(/\D/g,'');
+      let wa=clean.startsWith('20')?clean:clean.startsWith('0')?'2'+clean:'20'+clean;
+      list.push({name:s.name+' (الطالب)',phone:s.studentPhone,wa,msg,status});
+      added=true;
     }
+    if(!added) noPhone.push(s.name);
+  });
 
-    if(phones.length===0){
-      // مفيش رقم — نسجله ونكمل
-      noPhone.push(s.name);
-    } else {
-      phones.forEach(ph=>{ sendWAMsg(ph,type,s.name,date); count++; });
-    }
-    setTimeout(()=>sendOne(idx+1), phones.length>0?900:100);
-  };
-  sendOne(0);
+  if(!list.length){
+    showToast('لا يوجد أرقام مسجلة في هذه المجموعة','warning');
+    return;
+  }
+
+  // عرض القائمة كاملة — المستخدم يضغط على كل رقم
+  document.getElementById('modalTitle').textContent=`📲 إرسال إشعارات ${fmtDate(date)}`;
+  document.getElementById('modalBox').classList.add('modal-lg');
+  document.getElementById('modalBody').innerHTML=`
+    <div style="background:rgba(41,128,185,.1);border:1px solid rgba(41,128,185,.3);border-radius:10px;padding:12px;margin-bottom:14px;font-size:.83rem;">
+      💡 اضغط <strong>📲 إرسال</strong> بجانب كل اسم — الرسالة جاهزة أوتوماتيك
+    </div>
+    ${noPhone.length?`<div style="background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.3);border-radius:10px;padding:10px;margin-bottom:12px;font-size:.8rem;color:var(--danger);">
+      ⚠️ بدون رقم: ${noPhone.join('، ')}
+    </div>`:''}
+    <div class="table-wrapper"><table class="data-table">
+      <thead><tr><th>الطالب</th><th>الحالة</th><th>الرقم</th><th>إرسال</th></tr></thead>
+      <tbody>${list.map(item=>`<tr>
+        <td style="font-weight:700">${item.name}</td>
+        <td><span class="badge ${item.status==='present'?'badge-green':'badge-red'}">${item.status==='present'?'✅ حاضر':'❌ غائب'}</span></td>
+        <td style="font-family:monospace;font-size:.8rem">${item.phone}</td>
+        <td><a href="https://wa.me/${item.wa}?text=${encodeURIComponent(item.msg)}" target="_blank" class="btn btn-xs btn-success" onclick="logCommMessage('','${item.phone}','attend','')">📲 إرسال</a></td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  document.getElementById('modalFooter').innerHTML=`<button class="btn btn-secondary" onclick="closeModal()">إغلاق</button>`;
+  document.getElementById('modalOverlay').classList.add('show');
 }
 
 // ============================================================
@@ -2059,21 +2084,46 @@ function viewExam(id){
 
 function sendExamWA(id){
   const e=DB.exams.find(x=>x.id===id); if(!e)return;
-  let count=0;
+  const center=DB.settings.centerName;
+  const teacher=DB.settings.teacherName||'الأستاذ';
+  const list=[];
   const noPhone=[];
+
   (e.grades||[]).forEach(g=>{
-    const s=DB.students.find(x=>x.id===g.studentId);
-    if(!s) return;
+    const s=DB.students.find(x=>x.id===g.studentId); if(!s)return;
+    const pct=Math.round((g.score/e.total)*100);
+    const comment=pct>=90?'🏆 ممتاز':pct>=75?'🌟 جيد جداً':pct>=60?'👍 جيد':pct>=50?'⚠️ مقبول':'❌ يحتاج مراجعة';
+    const msg=`📝 *نتيجة الامتحان - ${center}*\n\nعزيزي ولي أمر الطالب: *${s.name}*\n\n🎯 الامتحان: ${e.name}\n📊 الدرجة: *${g.score} من ${e.total}* (${pct}%)\n${comment}\n\n— ${teacher}`;
     if(s.phone){
-      setTimeout(()=>sendWAMsg(s.phone,'grade',s.name,`${g.score} من ${e.total||100} في امتحان "${e.name}"`),count*800);
-      count++;
+      let clean=s.phone.replace(/\D/g,'');
+      let wa=clean.startsWith('20')?clean:clean.startsWith('0')?'2'+clean:'20'+clean;
+      list.push({name:s.name,phone:s.phone,wa,msg,score:`${g.score}/${e.total}`,pct});
     } else {
       noPhone.push(s.name);
     }
   });
-  let msg=`جاري إرسال ${count} رسالة`;
-  if(noPhone.length) msg+=` — ${noPhone.length} بدون رقم: ${noPhone.join('، ')}`;
-  showToast(msg,'info');
+
+  if(!list.length){showToast('لا أرقام مسجلة','warning');return;}
+
+  document.getElementById('modalTitle').textContent=`📲 إرسال نتائج ${e.name}`;
+  document.getElementById('modalBox').classList.add('modal-lg');
+  document.getElementById('modalBody').innerHTML=`
+    <div style="background:rgba(41,128,185,.1);border:1px solid rgba(41,128,185,.3);border-radius:10px;padding:12px;margin-bottom:14px;font-size:.83rem;">
+      💡 اضغط <strong>📲 إرسال</strong> بجانب كل طالب
+    </div>
+    ${noPhone.length?`<div style="background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.3);border-radius:10px;padding:10px;margin-bottom:12px;font-size:.8rem;color:var(--danger);">⚠️ بدون رقم: ${noPhone.join('، ')}</div>`:''}
+    <div class="table-wrapper"><table class="data-table">
+      <thead><tr><th>الطالب</th><th>الدرجة</th><th>النسبة</th><th>الرقم</th><th>إرسال</th></tr></thead>
+      <tbody>${list.map(item=>`<tr>
+        <td style="font-weight:700">${item.name}</td>
+        <td style="color:var(--gold2);font-weight:700">${item.score}</td>
+        <td style="color:${item.pct>=75?'var(--success)':item.pct>=50?'var(--warn)':'var(--danger)'}">${item.pct}%</td>
+        <td style="font-family:monospace;font-size:.8rem">${item.phone}</td>
+        <td><a href="https://wa.me/${item.wa}?text=${encodeURIComponent(item.msg)}" target="_blank" class="btn btn-xs btn-success">📲 إرسال</a></td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  document.getElementById('modalFooter').innerHTML=`<button class="btn btn-secondary" onclick="closeModal()">إغلاق</button>`;
+  document.getElementById('modalOverlay').classList.add('show');
 }
 
 function deleteExam(id){
