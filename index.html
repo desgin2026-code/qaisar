@@ -382,7 +382,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
 </div>
 
 <!-- PARENT PORTAL LOGIN -->
-<div id="parentSplash" style="display:none;position:fixed;inset:0;z-index:9998;background:radial-gradient(ellipse at 30% 40%,#0e2040 0%,#050d1a 60%);display:none;align-items:center;justify-content:center;flex-direction:column;gap:20px;">
+<div id="parentSplash" style="display:none;position:fixed;inset:0;z-index:9998;background:radial-gradient(ellipse at 30% 40%,#0e2040 0%,#050d1a 60%);align-items:center;justify-content:center;flex-direction:column;gap:20px;">
   <div class="login-card">
     <div style="text-align:center;margin-bottom:16px;">
       <div style="font-size:2.5rem;">👨‍👩‍👦</div>
@@ -397,7 +397,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
       <label class="form-label">كلمة المرور</label>
       <input type="password" id="parentPass" class="form-input" placeholder="••••••••" autocomplete="current-password">
     </div>
-    <button class="btn-login" onclick="doParentLogin()">🔐 دخول</button>
+    <button class="btn-login" id="parentLoginBtn" onclick="doParentLogin()">🔐 دخول</button>
     <div class="login-err" id="parentLoginErr">❌ البريد أو كلمة المرور غلط</div>
     <div style="margin-top:16px;text-align:center;border-top:1px solid rgba(201,162,39,.15);padding-top:14px;">
       <button onclick="showAdminLogin()" style="background:none;border:none;color:var(--txt2);font-family:'Cairo',sans-serif;font-size:.83rem;cursor:pointer;text-decoration:underline;">🔐 دخول المدير/المعلم</button>
@@ -3653,10 +3653,54 @@ function renderUsers(){
   const div=document.getElementById('usersContent');
   const allPerms=['students','groups','attendance','exams','payments','notes','files','schedule','settings','delete','reports','profits','bulkMsg','archive'];
   const permNames={students:'الطلاب',groups:'المجموعات',attendance:'الحضور',exams:'الامتحانات',payments:'المدفوعات',notes:'الملاحظات',files:'الملفات',schedule:'الجدول',settings:'الإعدادات',delete:'الحذف',reports:'التقارير',profits:'الأرباح',bulkMsg:'الرسائل الجماعية',archive:'الأرشيف'};
+
+  // Build parent accounts table
+  const parentAccounts=DB.parentAccounts||[];
+  const parentRows=parentAccounts.map(p=>{
+    const s=DB.students.find(x=>x.id===p.studentId);
+    return `<tr>
+      <td style="font-weight:700">${s?.name||'—'}</td>
+      <td style="font-size:.8rem;color:var(--txt2);">${s?.grade||'—'}</td>
+      <td style="font-family:monospace;font-size:.82rem;color:var(--gold2);">${p.email}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="ppw-${p.id}" style="font-family:monospace;letter-spacing:2px;">••••••</span>
+          <button class="btn btn-xs btn-secondary" onclick="toggleParentPass('${p.id}')" title="عرض">👁️</button>
+        </div>
+      </td>
+      <td class="actions">
+        <button class="btn btn-xs btn-success" onclick="sendParentCredentialsWA('${p.studentId}','${p.email}',document.getElementById('ppw-${p.id}').textContent==='••••••'?'':document.getElementById('ppw-${p.id}').textContent)">📲 واتساب</button>
+        <button class="btn btn-xs btn-info" onclick="openAddParentAccount('${p.studentId}')">✏️ تعديل</button>
+        <button class="btn btn-xs btn-danger" onclick="deleteParentAccount('${p.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+
   div.innerHTML=`
     <div style="background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.2);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:.83rem;display:flex;align-items:center;gap:10px;">
       🔒 <span>كلمات المرور ظاهرة للمدير فقط — احرص على سرية هذه الصفحة</span>
     </div>
+
+    <!-- ===== أولياء الأمور ===== -->
+    <div style="background:var(--bg2);border:1px solid rgba(41,128,185,.3);border-radius:var(--radius);padding:20px;margin-bottom:24px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div style="font-size:1rem;font-weight:700;color:var(--info);">👨‍👩‍👦 بوابة أولياء الأمور</div>
+        <div style="font-size:.78rem;color:var(--txt3);">إجمالي: ${parentAccounts.length} حساب</div>
+      </div>
+      ${parentAccounts.length?`
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>اسم الطالب</th><th>الصف</th><th>البريد الإلكتروني</th><th>كلمة المرور</th><th>إجراءات</th></tr></thead>
+          <tbody>${parentRows}</tbody>
+        </table>
+      </div>`:`
+      <div class="empty-state" style="padding:20px;">
+        <div class="empty-icon">👨‍👩‍👦</div>
+        <div class="empty-txt">لا حسابات بعد — اضغط 👨‍👩‍👦 على بطاقة أي طالب لإنشاء حساب</div>
+      </div>`}
+    </div>
+
+    <!-- ===== المستخدمين ===== -->
     <div class="table-wrapper" style="margin-bottom:24px;"><table class="data-table"><thead><tr><th>المستخدم</th><th>الاسم</th><th>كلمة المرور</th><th>الصلاحية</th><th>آخر دخول</th><th>الإجراءات</th></tr></thead><tbody>${
       DB.users.map(u=>`<tr>
         <td style="font-family:monospace">${u.username}</td>
@@ -3681,6 +3725,26 @@ function renderUsers(){
     </div>
     <div class="table-wrapper"><table class="data-table"><thead><tr><th>المستخدم</th><th>الإجراء</th><th>التفاصيل</th><th>الوقت</th></tr></thead><tbody>${
       DB.activityLog.slice(0,50).map(l=>`<tr><td>${l.user}</td><td>${l.action}</td><td style="color:var(--txt2)">${l.details}</td><td style="font-size:.75rem;color:var(--txt3)">${new Date(l.time).toLocaleString('ar-EG')}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function toggleParentPass(pid){
+  const el=document.getElementById('ppw-'+pid); if(!el)return;
+  // Find password from DB
+  const p=(DB.parentAccounts||[]).find(x=>x.id===pid);
+  if(el.textContent==='••••••'){
+    el.textContent=p?.password||p?.pass||'(غير محفوظة — ابعتها من الطالب)';
+    el.style.color='var(--gold2)';
+  } else {
+    el.textContent='••••••';
+    el.style.color='';
+  }
+}
+
+function deleteParentAccount(pid){
+  if(!checkPerm('delete')){showToast('ليس لديك صلاحية','error');return;}
+  if(!confirm('حذف حساب ولي الأمر هذا؟'))return;
+  DB.parentAccounts=(DB.parentAccounts||[]).filter(x=>x.id!==pid);
+  saveDB(); renderUsers(); showToast('تم الحذف','success');
 }
 
 function toggleShowPass(uid, pw){
@@ -5880,6 +5944,20 @@ function showParentLogin(){
   document.getElementById('splash').style.display='none';
   const pp=document.getElementById('parentSplash');
   pp.style.display='flex';
+  // تأكد إن Firebase Auth جاهز
+  const btn=document.getElementById('parentLoginBtn');
+  if(!fbAuth){
+    if(btn){ btn.disabled=true; btn.textContent='⏳ جاري تحميل النظام...'; }
+    let tries=0;
+    const waitAuth=setInterval(()=>{
+      tries++;
+      try{ if(!fbAuth&&fbApp) fbAuth=firebase.auth(fbApp); }catch(e){}
+      if(fbAuth||tries>=20){
+        clearInterval(waitAuth);
+        if(btn){ btn.disabled=false; btn.textContent='🔐 دخول'; }
+      }
+    },300);
+  }
   setTimeout(()=>document.getElementById('parentEmail')?.focus(),100);
 }
 
@@ -5889,25 +5967,49 @@ function showAdminLogin(){
 }
 
 function doParentLogin(){
-  const email=document.getElementById('parentEmail').value.trim();
+  const email=document.getElementById('parentEmail').value.trim().toLowerCase();
   const pass=document.getElementById('parentPass').value.trim();
   const errEl=document.getElementById('parentLoginErr');
   errEl.style.display='none';
-  if(!email||!pass){ errEl.style.display='block'; errEl.textContent='❌ أدخل البريد وكلمة المرور'; return; }
+  if(!email||!pass){ errEl.style.display='block'; errEl.style.color='var(--danger)'; errEl.textContent='❌ أدخل البريد وكلمة المرور'; return; }
+
+  // ===== أولاً: تحقق من DB المحلية (بدون Firebase) =====
+  const localAccount=(DB.parentAccounts||[]).find(p=>p.email.toLowerCase()===email);
+  if(localAccount && localAccount.password===pass){
+    const s=DB.students.find(x=>x.id===localAccount.studentId);
+    if(s){ openParentPortal(s); return; }
+  }
+  if(localAccount && localAccount.password && localAccount.password!==pass){
+    errEl.style.display='block'; errEl.style.color='var(--danger)';
+    errEl.textContent='❌ كلمة المرور غلط'; return;
+  }
+
+  // ===== ثانياً: جرب Firebase لو متاح =====
   if(!fbAuth){ try{ initFirebaseAuth(); }catch(e){} }
   if(!fbAuth){
-    errEl.style.display='block'; errEl.style.color='var(--warn)';
-    errEl.textContent='⏳ جاري الاتصال... اضغط دخول مرة تانية';
-    return;
+    // Firebase مش متاح — شغل بالـ DB المحلية بس
+    if(localAccount){
+      const s=DB.students.find(x=>x.id===localAccount.studentId);
+      if(s){ openParentPortal(s); return; }
+    }
+    errEl.style.display='block'; errEl.style.color='var(--danger)';
+    errEl.textContent='❌ البريد أو كلمة المرور غلط'; return;
   }
+
   errEl.textContent='⏳ جاري التحقق...'; errEl.style.display='block'; errEl.style.color='var(--info)';
   fbAuth.signInWithEmailAndPassword(email,pass)
     .then(cred=>{
       errEl.style.display='none';
       currentParent=cred.user;
-      const parentAccount=(DB.parentAccounts||[]).find(p=>p.email===email);
-      if(parentAccount){ const s=DB.students.find(x=>x.id===parentAccount.studentId); if(s){ openParentPortal(s); return; } }
-      const student=DB.students.find(s=>s.parentEmail===email);
+      const parentAccount=(DB.parentAccounts||[]).find(p=>p.email.toLowerCase()===email);
+      if(parentAccount){
+        // تحديث الباسورد في DB لو اتغير
+        parentAccount.password=pass;
+        saveDB();
+        const s=DB.students.find(x=>x.id===parentAccount.studentId);
+        if(s){ openParentPortal(s); return; }
+      }
+      const student=DB.students.find(s=>s.parentEmail?.toLowerCase()===email);
       if(student){ openParentPortal(student); return; }
       errEl.style.display='block'; errEl.style.color='var(--danger)';
       errEl.textContent='❌ لا يوجد طالب مرتبط — تواصل مع المدرس';
@@ -5953,7 +6055,8 @@ function createParentAccount(studentId){
   const saveAndNotify=()=>{
     DB.parentAccounts=DB.parentAccounts||[];
     const existing=DB.parentAccounts.findIndex(p=>p.studentId===studentId);
-    const account={id:uid(),studentId,email,createdAt:new Date().toISOString(),createdBy:currentUser?.name};
+    // حفظ كلمة المرور في DB عشان تظهر في صفحة المدير
+    const account={id:existing>-1?DB.parentAccounts[existing].id:uid(),studentId,email,password:pass,createdAt:new Date().toISOString(),createdBy:currentUser?.name};
     if(existing>-1) DB.parentAccounts[existing]=account;
     else DB.parentAccounts.push(account);
     if(s) s.parentEmail=email;
