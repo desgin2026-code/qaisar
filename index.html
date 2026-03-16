@@ -912,9 +912,8 @@ let fbSyncEnabled = false;
 let fbLastPush = 0;
 
 function initFirebase(){
-  // Wait for firebase library to load
   if(typeof firebase === 'undefined'){
-    setTimeout(initFirebase, 500);
+    setTimeout(initFirebase, 800);
     return;
   }
   try {
@@ -924,16 +923,22 @@ function initFirebase(){
       fbApp = firebase.app();
     }
     fbDB = firebase.firestore(fbApp);
-    // Enable offline persistence
-    fbDB.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+    fbDB.enablePersistence({synchronizeTabs:true}).catch(e=>{
+      if(e.code!=='failed-precondition'&&e.code!=='unimplemented')
+        console.warn('Persistence:', e);
+    });
     fbSyncEnabled = true;
-    // Init Auth
     initFirebaseAuth();
     startFirebaseListener();
     showSyncIndicator('🔥 Firebase متصل');
+    // Force push current data
+    setTimeout(pushToFirebase, 2000);
   } catch(e){
     fbSyncEnabled = false;
-    console.warn('Firebase init failed:', e);
+    console.warn('Firebase init failed:', e.code, e.message);
+    showSyncIndicator('⚠️ فشل الاتصال — '+e.message);
+    // Retry after 5 seconds
+    setTimeout(initFirebase, 5000);
   }
 }
 
@@ -4323,7 +4328,7 @@ function renderSyncPanel(){
       </div>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-info" style="flex:1;" onclick="pushToFirebase();showToast('جاري الإرسال...','info');">📤 رفع البيانات الآن</button>
-        <button class="btn btn-secondary" style="flex:1;" onclick="initFirebase();">🔄 إعادة الاتصال</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="fbSyncEnabled=false;fbApp=null;fbDB=null;if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}initFirebase();showToast('جاري إعادة الاتصال...','info');">🔄 إعادة الاتصال</button>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
