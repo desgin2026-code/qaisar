@@ -1926,16 +1926,35 @@ function doSendAttendWA(gid,date,target){
   const students=DB.students.filter(s=>s.groupId===gid);
   const records=DB.attendance.filter(a=>a.groupId===gid&&a.date===date);
   let count=0;
+  let noPhone=[];
+
   const sendOne=(idx)=>{
-    if(idx>=students.length){ showToast(`✅ تم فتح ${count} رسالة واتساب`,'success'); return; }
+    if(idx>=students.length){
+      let msg=`✅ تم إرسال ${count} رسالة واتساب`;
+      if(noPhone.length) msg+=`\n⚠️ ${noPhone.length} طالب بدون رقم: ${noPhone.join('، ')}`;
+      showToast(msg,'success');
+      return;
+    }
     const s=students[idx];
     const rec=records.find(r=>r.studentId===s.id);
     const type=rec?.status==='present'?'present':'absent';
+
+    // جمع الأرقام المتاحة
     const phones=[];
-    if((target==='parent'||target==='both')&&s.phone) phones.push(s.phone);
-    if((target==='student'||target==='both')&&s.studentPhone) phones.push(s.studentPhone);
-    phones.forEach(ph=>{ sendWAMsg(ph,type,s.name,date); count++; });
-    setTimeout(()=>sendOne(idx+1),900);
+    if(target==='parent'||target==='both'){
+      if(s.phone) phones.push(s.phone);
+    }
+    if(target==='student'||target==='both'){
+      if(s.studentPhone) phones.push(s.studentPhone);
+    }
+
+    if(phones.length===0){
+      // مفيش رقم — نسجله ونكمل
+      noPhone.push(s.name);
+    } else {
+      phones.forEach(ph=>{ sendWAMsg(ph,type,s.name,date); count++; });
+    }
+    setTimeout(()=>sendOne(idx+1), phones.length>0?900:100);
   };
   sendOne(0);
 }
@@ -2034,19 +2053,20 @@ function viewExam(id){
 
 function sendExamWA(id){
   const e=DB.exams.find(x=>x.id===id); if(!e)return;
-  const withPhone=[];
+  let count=0;
   const noPhone=[];
   (e.grades||[]).forEach(g=>{
     const s=DB.students.find(x=>x.id===g.studentId);
     if(!s) return;
-    if(s.phone) withPhone.push({s,g});
-    else noPhone.push(s.name);
+    if(s.phone){
+      setTimeout(()=>sendWAMsg(s.phone,'grade',s.name,`${g.score} من ${e.total||100} في امتحان "${e.name}"`),count*800);
+      count++;
+    } else {
+      noPhone.push(s.name);
+    }
   });
-  withPhone.forEach((item,i)=>{
-    setTimeout(()=>sendWAMsg(item.s.phone,'grade',item.s.name,`${item.g.score} من ${e.total||100} في امتحان "${e.name}"`),i*800);
-  });
-  let msg=`جاري فتح ${withPhone.length} رسالة واتساب`;
-  if(noPhone.length) msg+=` — ${noPhone.length} طالب بدون رقم: ${noPhone.join('، ')}`;
+  let msg=`جاري إرسال ${count} رسالة`;
+  if(noPhone.length) msg+=` — ${noPhone.length} بدون رقم: ${noPhone.join('، ')}`;
   showToast(msg,'info');
 }
 
