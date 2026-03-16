@@ -391,11 +391,11 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
     </div>
     <div class="form-group">
       <label class="form-label">البريد الإلكتروني</label>
-      <input type="email" id="parentEmail" class="form-input" placeholder="example@email.com" dir="ltr" autocomplete="email">
+      <input type="email" id="parentEmail" class="form-input" placeholder="example@email.com" dir="ltr" autocomplete="email" onkeydown="if(event.key==='Enter')doParentLogin()">
     </div>
     <div class="form-group">
       <label class="form-label">كلمة المرور</label>
-      <input type="password" id="parentPass" class="form-input" placeholder="••••••••" autocomplete="current-password">
+      <input type="password" id="parentPass" class="form-input" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doParentLogin()">
     </div>
     <button class="btn-login" id="parentLoginBtn" onclick="doParentLogin()">🔐 دخول</button>
     <div class="login-err" id="parentLoginErr">❌ البريد أو كلمة المرور غلط</div>
@@ -1837,15 +1837,12 @@ function filterAttendSearch(q,gid,date){
 }
 
 function setAttend(sid,gid,date,status,btn){
-  // Update UI
   const row=btn.closest('.attend-btn-group');
   row.querySelectorAll('.attend-btn-pro').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  // Update data
   const idx=DB.attendance.findIndex(a=>a.studentId===sid&&a.groupId===gid&&a.date===date);
   if(idx>-1){ DB.attendance[idx].status=status; } else { DB.attendance.push({id:uid(),studentId:sid,groupId:gid,date,status,createdBy:currentUser?.name}); }
   saveDB();
-  // Refresh counters live
   const students=DB.students.filter(s=>s.groupId===gid);
   const existing=DB.attendance.filter(a=>a.groupId===gid&&a.date===date);
   const pc=existing.filter(a=>a.status==='present').length;
@@ -1855,6 +1852,11 @@ function setAttend(sid,gid,date,status,btn){
   if(pills[0]) pills[0].innerHTML=`✅ حاضر: <strong>${pc}</strong>`;
   if(pills[1]) pills[1].innerHTML=`❌ غائب: <strong>${ac}</strong>`;
   if(pills[2]) pills[2].innerHTML=`⏳ لم يُسجَّل: <strong>${nr}</strong>`;
+  // إرسال واتساب تلقائي لأي طالب (سواء عنده أكونت أو لأ)
+  const s=DB.students.find(x=>x.id===sid);
+  if(s?.phone && DB.settings.autoWAAttend){
+    sendWAMsg(s.phone, status==='present'?'present':'absent', s.name, date);
+  }
 }
 
 function markAll(gid,date,status){
@@ -5967,60 +5969,41 @@ function showAdminLogin(){
 }
 
 function doParentLogin(){
-  const email=document.getElementById('parentEmail').value.trim().toLowerCase();
+  const emailRaw=document.getElementById('parentEmail').value.trim();
   const pass=document.getElementById('parentPass').value.trim();
   const errEl=document.getElementById('parentLoginErr');
-  errEl.style.display='none';
-  if(!email||!pass){ errEl.style.display='block'; errEl.style.color='var(--danger)'; errEl.textContent='❌ أدخل البريد وكلمة المرور'; return; }
+  const email=emailRaw.toLowerCase();
 
-  // ===== أولاً: تحقق من DB المحلية (بدون Firebase) =====
-  const localAccount=(DB.parentAccounts||[]).find(p=>p.email.toLowerCase()===email);
-  if(localAccount && localAccount.password===pass){
-    const s=DB.students.find(x=>x.id===localAccount.studentId);
-    if(s){ openParentPortal(s); return; }
+  // Reset error
+  errEl.style.display='none';
+
+  if(!email||!pass){
+    errEl.style.display='block'; errEl.style.color='var(--danger)';
+    errEl.textContent='❌ أدخل البريد وكلمة المرور'; return;
   }
-  if(localAccount && localAccount.password && localAccount.password!==pass){
+
+  // ===== تحقق من DB المحلية أولاً وبس =====
+  const accounts=DB.parentAccounts||[];
+  const account=accounts.find(p=>p.email&&p.email.toLowerCase()===email);
+
+  if(!account){
+    errEl.style.display='block'; errEl.style.color='var(--danger)';
+    errEl.textContent='❌ هذا البريد غير مسجل — تواصل مع المدرس'; return;
+  }
+
+  if(account.password!==pass){
     errEl.style.display='block'; errEl.style.color='var(--danger)';
     errEl.textContent='❌ كلمة المرور غلط'; return;
   }
 
-  // ===== ثانياً: جرب Firebase لو متاح =====
-  if(!fbAuth){ try{ initFirebaseAuth(); }catch(e){} }
-  if(!fbAuth){
-    // Firebase مش متاح — شغل بالـ DB المحلية بس
-    if(localAccount){
-      const s=DB.students.find(x=>x.id===localAccount.studentId);
-      if(s){ openParentPortal(s); return; }
-    }
+  const student=DB.students.find(x=>x.id===account.studentId);
+  if(!student){
     errEl.style.display='block'; errEl.style.color='var(--danger)';
-    errEl.textContent='❌ البريد أو كلمة المرور غلط'; return;
+    errEl.textContent='❌ لا يوجد طالب مرتبط — تواصل مع المدرس'; return;
   }
 
-  errEl.textContent='⏳ جاري التحقق...'; errEl.style.display='block'; errEl.style.color='var(--info)';
-  fbAuth.signInWithEmailAndPassword(email,pass)
-    .then(cred=>{
-      errEl.style.display='none';
-      currentParent=cred.user;
-      const parentAccount=(DB.parentAccounts||[]).find(p=>p.email.toLowerCase()===email);
-      if(parentAccount){
-        // تحديث الباسورد في DB لو اتغير
-        parentAccount.password=pass;
-        saveDB();
-        const s=DB.students.find(x=>x.id===parentAccount.studentId);
-        if(s){ openParentPortal(s); return; }
-      }
-      const student=DB.students.find(s=>s.parentEmail?.toLowerCase()===email);
-      if(student){ openParentPortal(student); return; }
-      errEl.style.display='block'; errEl.style.color='var(--danger)';
-      errEl.textContent='❌ لا يوجد طالب مرتبط — تواصل مع المدرس';
-      fbAuth.signOut();
-    })
-    .catch(e=>{
-      errEl.style.display='block'; errEl.style.color='var(--danger)';
-      if(e.code==='auth/network-request-failed') errEl.textContent='❌ لا يوجد اتصال بالإنترنت';
-      else if(e.code==='auth/wrong-password'||e.code==='auth/user-not-found'||e.code==='auth/invalid-credential') errEl.textContent='❌ البريد أو كلمة المرور غلط';
-      else errEl.textContent='❌ خطأ — حاول مرة تانية';
-    });
+  // ✅ دخول ناجح
+  openParentPortal(student);
 }
 
 function openAddParentAccount(studentId){
@@ -6089,14 +6072,17 @@ function sendParentCredentialsWA(studentId, email, pass){
   const s=DB.students.find(x=>x.id===studentId); if(!s)return;
   const phone=s.phone;
   if(!phone){showToast('لا يوجد رقم هاتف لولي الأمر','warning');return;}
+  // لو الباسورد مش متبعت — جيبه من DB
+  const account=(DB.parentAccounts||[]).find(p=>p.studentId===studentId);
+  const finalPass=pass&&pass!=='••••••'?pass:(account?.password||'');
   const center=DB.settings.centerName||'سنتر القيصر';
   const siteUrl='qaisar-center.netlify.app';
-  const msg=`السلام عليكم 🌟\n\n*${center}*\n\nتم إنشاء حسابك على بوابة أولياء الأمور لمتابعة ابنك *${s.name}* 👨‍👩‍👦\n\n🔗 رابط البرنامج:\n${siteUrl}\n\n📧 البريد:\n${email}\n\n🔑 كلمة المرور:\n${pass||'كلمة المرور التي تم تحديدها'}\n\n*خطوات الدخول:*\n١. افتح الرابط\n٢. اضغط "دخول ولي الأمر"\n٣. أدخل البريد وكلمة المرور\n\nتقدر تتابع: ✅ الحضور | 📝 الدرجات | 💰 المدفوعات | 📅 الجدول\n\nللمساعدة تواصل معنا 🙏`;
+  const msg=`السلام عليكم 🌟\n\n*${center}*\n\nتم إنشاء حسابك على بوابة أولياء الأمور لمتابعة ابنك *${s.name}* 👨‍👩‍👦\n\n🔗 رابط البرنامج:\n${siteUrl}\n\n📧 البريد الإلكتروني:\n${email}\n\n🔑 كلمة المرور:\n${finalPass||'(كلمة المرور التي تم تحديدها)'}\n\n*خطوات الدخول:*\n١. افتح الرابط\n٢. اضغط "دخول ولي الأمر"\n٣. أدخل البريد وكلمة المرور\n\nمن خلال حسابك تقدر تتابع:\n✅ الحضور والغياب\n📝 نتائج الامتحانات\n💰 حالة المدفوعات\n📅 الجدول الدراسي\n\nللمساعدة تواصل معنا 🙏`;
   const clean=phone.replace(/\D/g,'').replace(/^0/,'');
   const waPhone=clean.startsWith('2')?clean:'2'+clean;
-  window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg.replace(/\\n/g,'\n'))}`, '_blank');
+  window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`,'_blank');
   closeModal();
-  showToast('✅ تم فتح واتساب','success');
+  showToast('✅ تم فتح واتساب بالرسالة الجاهزة','success');
 }
 
 
