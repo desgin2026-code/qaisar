@@ -1983,7 +1983,7 @@ function doSendAttendWA(gid,date,target){
         <td style="font-weight:700">${item.name}</td>
         <td><span class="badge ${item.status==='present'?'badge-green':'badge-red'}">${item.status==='present'?'✅ حاضر':'❌ غائب'}</span></td>
         <td style="font-family:monospace;font-size:.8rem">${item.phone}</td>
-        <td><a href="https://wa.me/${item.wa}?text=${encodeURIComponent(item.msg)}" target="_blank" class="btn btn-xs btn-success" onclick="logCommMessage('','${item.phone}','attend','')">📲 إرسال</a></td>
+        <td><a href="https://wa.me/${item.wa}?text=${encodeURIComponent(item.msg)}" target="_blank" class="btn btn-xs btn-success" id="sendbtn-${item.wa}" onclick="markSent('${item.wa}')">📲 إرسال</a></td>
       </tr>`).join('')}</tbody>
     </table></div>`;
   document.getElementById('modalFooter').innerHTML=`<button class="btn btn-secondary" onclick="closeModal()">إغلاق</button>`;
@@ -2119,7 +2119,7 @@ function sendExamWA(id){
         <td style="color:var(--gold2);font-weight:700">${item.score}</td>
         <td style="color:${item.pct>=75?'var(--success)':item.pct>=50?'var(--warn)':'var(--danger)'}">${item.pct}%</td>
         <td style="font-family:monospace;font-size:.8rem">${item.phone}</td>
-        <td><a href="https://wa.me/${item.wa}?text=${encodeURIComponent(item.msg)}" target="_blank" class="btn btn-xs btn-success">📲 إرسال</a></td>
+        <td><a href="https://wa.me/${item.wa}?text=${encodeURIComponent(item.msg)}" target="_blank" class="btn btn-xs btn-success" id="sendbtn-${item.wa}" onclick="markSent('${item.wa}')">📲 إرسال</a></td>
       </tr>`).join('')}</tbody>
     </table></div>`;
   document.getElementById('modalFooter').innerHTML=`<button class="btn btn-secondary" onclick="closeModal()">إغلاق</button>`;
@@ -3463,7 +3463,7 @@ function sendBulkMsg(){
     return `<tr>
       <td style="font-weight:700">${i+1}. ${s.name}</td>
       <td style="font-family:monospace;font-size:.8rem">${s.phone}</td>
-      <td><a href="${waLink}" target="_blank" onclick="logCommMessage('${s.id}','${s.phone}','bulk',\`${personalMsg.replace(/`/g,"'")}\`);saveDB();" class="btn btn-xs btn-success">📲 إرسال</a></td>
+      <td><a href="${waLink}" target="_blank" onclick="logCommMessage('${s.id}','${s.phone}','bulk',\`${personalMsg.replace(/`/g,"'")}\`);saveDB();markSent('${waPhone}');" class="btn btn-xs btn-success" id="sendbtn-${waPhone}">📲 إرسال</a></td>
     </tr>`;
   }).join('');
 
@@ -4612,6 +4612,21 @@ function sendWAMsg(phone,type,studentName,extra){
   const s=DB.students.find(x=>x.phone===phone);
   if(s) logCommMessage(s.id,phone,type,msg);
   saveDB();
+}
+
+function markSent(waPhone){
+  setTimeout(()=>{
+    const btn=document.getElementById('sendbtn-'+waPhone);
+    if(btn){
+      btn.innerHTML='✅ تم الإرسال';
+      btn.style.background='var(--success)';
+      btn.style.pointerEvents='none';
+      btn.style.opacity='.8';
+      // تلوين الصف كله
+      const row=btn.closest('tr');
+      if(row) row.style.background='rgba(39,174,96,.08)';
+    }
+  },500);
 }
 
 function sendWAManual(studentName, encodedMsg){
