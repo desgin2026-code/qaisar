@@ -4453,29 +4453,28 @@ function sendWAChoice(studentId, type, extra){
   }
 }
 function sendWAMsg(phone,type,studentName,extra){
-  if(!phone){ showToast('لا يوجد رقم هاتف لولي الأمر','warning'); return; }
-  let msg='';
   const center=DB.settings.centerName;
   const teacher=DB.settings.teacherName||'الأستاذ';
   const d=fmtDate(today());
+  let msg='';
   switch(type){
     case 'present':
-      msg=`✅ *إشعار حضور - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*\n\nنُبشّركم بأن الطالب حضر حصة الدراسات الاجتماعية اليوم بتاريخ ${d} وكان منتظماً.\n\nنتمنى له دوام التفوق 🌟\n\n— ${teacher}`;
+      msg=`✅ *إشعار حضور - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*\n\nنُبشّركم بأن الطالب حضر حصة اليوم بتاريخ ${d} وكان منتظماً.\n\nنتمنى له دوام التفوق 🌟\n\n— ${teacher}`;
       break;
     case 'absent':
-      msg=`❌ *إشعار غياب - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*\n\nنُحيطكم علماً بغياب الطالب عن حصة الدراسات الاجتماعية اليوم بتاريخ ${d}.\n\nنرجو الاطمئنان عليه ومتابعة حضوره في المرات القادمة.\n\nللتواصل: ${teacher}`;
+      msg=`❌ *إشعار غياب - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*\n\nنُحيطكم علماً بغياب الطالب عن الحصة اليوم بتاريخ ${d}.\n\nنرجو الاطمئنان عليه ومتابعة حضوره.\n\nللتواصل: ${teacher}`;
       break;
     case 'grade':
-      msg=`📝 *نتيجة الامتحان - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*\n\nنُبلغكم بنتيجة الطالب في الامتحان الأخير:\n🎯 *${extra}*\n\n${buildGradeComment(extra)}\n\n— ${teacher}`;
+      msg=`📝 *نتيجة الامتحان - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*\n\nنُبلغكم بنتيجة الطالب:\n🎯 *${extra}*\n\n${buildGradeComment(extra)}\n\n— ${teacher}`;
       break;
     case 'payment':
-      msg=`💰 *تأكيد السداد - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*\n\nتم تسجيل سداد رسوم اشتراك شهر *${extra}* بنجاح.\n\nشكراً لحرصكم على الالتزام بالمواعيد 🙏\n\n— ${teacher}`;
+      msg=`💰 *تأكيد السداد - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*\n\nتم تسجيل سداد رسوم اشتراك شهر *${extra}* بنجاح.\n\nشكراً لحرصكم 🙏\n\n— ${teacher}`;
       break;
     case 'payment_late':
-      msg=`⚠️ *تذكير بالسداد - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*\n\nنُذكّركم بضرورة سداد رسوم الاشتراك الشهري حتى لا يتأثر مسيرة الطالب الدراسية.\n\nيُرجى التواصل لترتيب السداد في أقرب وقت.\n\n— ${teacher}`;
+      msg=`⚠️ *تذكير بالسداد - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*\n\nنُذكّركم بضرورة سداد رسوم الاشتراك الشهري.\n\nيُرجى التواصل لترتيب السداد.\n\n— ${teacher}`;
       break;
     case 'report': {
-      const s2=DB.students.find(x=>x.name===studentName);
+      const s2=DB.students.find(x=>x.name===studentName)||DB.students.find(x=>x.phone===phone);
       let reportTxt='';
       if(s2){
         const att=DB.attendance.filter(a=>a.studentId===s2.id);
@@ -4486,27 +4485,58 @@ function sendWAMsg(phone,type,studentName,extra){
         const paid=DB.payments.filter(p=>p.studentId===s2.id&&p.status==='paid').length;
         reportTxt=`\n📊 *ملخص أداء الطالب:*\n✅ أيام الحضور: ${pr} يوم\n❌ أيام الغياب: ${ab} يوم\n📝 متوسط الدرجات: ${avg}%\n💰 شهور مسددة: ${paid}`;
       }
-      msg=`📊 *تقرير أداء الطالب - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*${reportTxt}\n\nللمزيد من التفاصيل يمكنكم التواصل مع ${teacher} في أي وقت.\n\nنتمنى للطالب التوفيق والنجاح 🌟`;
-      break;
-    }
-    case 'attendance_summary': {
-      msg=`📋 *ملخص الحضور والغياب - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*\n\n${extra}\n\n— ${teacher}`;
-      break;
-    }
-    case 'exam_result': {
-      msg=`🎯 *نتيجة الامتحان - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*\n\n${extra}\n\nللاستفسار تواصل مع ${teacher}`;
+      msg=`📊 *تقرير أداء الطالب - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*${reportTxt}\n\nنتمنى للطالب التوفيق 🌟\n\n— ${teacher}`;
       break;
     }
     default:
-      msg=extra?`${extra}\n\n— ${teacher}`:
-        `📢 *رسالة من ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*\n\nللتواصل والاستفسار: ${teacher}`;
+      msg=extra?`${extra}\n\n— ${teacher}`:`📢 *رسالة من ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*\n\n— ${teacher}`;
   }
+
+  // لو مفيش رقم — اعرض popup لاختيار الإرسال يدوياً
+  if(!phone){
+    document.getElementById('modalTitle').textContent=`📲 إرسال لولي أمر ${studentName}`;
+    document.getElementById('modalBody').innerHTML=`
+      <div style="background:rgba(230,126,34,.1);border:1px solid rgba(230,126,34,.3);border-radius:10px;padding:14px;margin-bottom:14px;font-size:.85rem;">
+        ⚠️ الطالب <strong>${studentName}</strong> ليس لديه رقم هاتف مسجل
+      </div>
+      <div class="form-group">
+        <label class="form-label">أدخل رقم واتساب ولي الأمر يدوياً</label>
+        <input class="form-input" id="manualPhone" type="tel" placeholder="01xxxxxxxxx" dir="ltr">
+      </div>
+      <div style="background:var(--bg3);border-radius:10px;padding:12px;font-size:.82rem;color:var(--txt2);margin-top:8px;">
+        <div style="font-weight:700;margin-bottom:6px;">📋 نص الرسالة:</div>
+        <div style="white-space:pre-wrap;font-size:.78rem;">${msg}</div>
+      </div>`;
+    document.getElementById('modalFooter').innerHTML=`
+      <button class="btn btn-success" onclick="sendWAManual('${studentName}','${encodeURIComponent(msg)}')">📲 إرسال</button>
+      <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>`;
+    document.getElementById('modalOverlay').classList.add('show');
+    return;
+  }
+
   const cleanPhone=phone.replace(/\D/g,'').replace(/^0/,'');
   const waPhone=cleanPhone.startsWith('2')?cleanPhone:'2'+cleanPhone;
   window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`,'_blank');
   const s=DB.students.find(x=>x.phone===phone);
   if(s) logCommMessage(s.id,phone,type,msg);
   saveDB();
+}
+
+function sendWAManual(studentName, encodedMsg){
+  const phoneRaw=document.getElementById('manualPhone')?.value.trim();
+  if(!phoneRaw){showToast('أدخل رقم الهاتف','error');return;}
+  const clean=phoneRaw.replace(/\D/g,'').replace(/^0/,'');
+  const waPhone=clean.startsWith('2')?clean:'2'+clean;
+  window.open(`https://wa.me/${waPhone}?text=${encodedMsg}`,'_blank');
+  // Save phone to student
+  const s=DB.students.find(x=>x.name===studentName);
+  if(s&&!s.phone){
+    if(confirm(`حفظ الرقم ${phoneRaw} في بيانات ${studentName}؟`)){
+      s.phone=phoneRaw; saveDB();
+      showToast('✅ تم حفظ الرقم','success');
+    }
+  }
+  closeModal();
 }
 
 function buildGradeComment(extra){
