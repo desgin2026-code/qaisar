@@ -916,27 +916,33 @@ function initFirebase(){
     setTimeout(initFirebase, 800);
     return;
   }
+  // لو Firebase شغال بالفعل — مش محتاج نعمله تاني
+  if(fbSyncEnabled && fbDB){
+    showSyncIndicator('🔥 Firebase متصل');
+    return;
+  }
   try {
     if(!firebase.apps.length){
       fbApp = firebase.initializeApp(FIREBASE_CONFIG);
     } else {
       fbApp = firebase.app();
     }
-    fbDB = firebase.firestore(fbApp);
-    fbDB.enablePersistence({synchronizeTabs:true}).catch(e=>{
-      if(e.code!=='failed-precondition'&&e.code!=='unimplemented')
-        console.warn('Persistence:', e);
-    });
+    // لو fbDB موجود بالفعل — استخدمه من غير ما نعمل persistence تاني
+    if(!fbDB){
+      fbDB = firebase.firestore(fbApp);
+      fbDB.enablePersistence({synchronizeTabs:true}).catch(e=>{
+        // Persistence error is OK - Firestore still works
+        console.warn('Persistence skipped:', e.code);
+      });
+    }
     fbSyncEnabled = true;
     initFirebaseAuth();
     startFirebaseListener();
     showSyncIndicator('🔥 Firebase متصل');
-    // Force push current data
     setTimeout(pushToFirebase, 2000);
   } catch(e){
     fbSyncEnabled = false;
     console.warn('Firebase init failed:', e.code, e.message);
-    showSyncIndicator('⚠️ فشل الاتصال — '+e.message);
     // Retry after 5 seconds
     setTimeout(initFirebase, 5000);
   }
@@ -4348,7 +4354,7 @@ function renderSyncPanel(){
       </div>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-info" style="flex:1;" onclick="pushToFirebase();showToast('جاري الإرسال...','info');">📤 رفع البيانات الآن</button>
-        <button class="btn btn-secondary" style="flex:1;" onclick="fbSyncEnabled=false;fbApp=null;fbDB=null;if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}initFirebase();showToast('جاري إعادة الاتصال...','info');">🔄 إعادة الاتصال</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="fbSyncEnabled=false;if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}initFirebase();showToast('جاري إعادة الاتصال...','info');">🔄 إعادة الاتصال</button>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
