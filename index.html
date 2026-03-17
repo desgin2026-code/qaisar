@@ -423,6 +423,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
       <div class="inner-tab" onclick="switchParentTab('grades',this)">📝 الدرجات</div>
       <div class="inner-tab" onclick="switchParentTab('payments',this)">💰 المدفوعات</div>
       <div class="inner-tab" onclick="switchParentTab('schedule',this)">📅 الجدول</div>
+      <div class="inner-tab" onclick="switchParentTab('settings',this)">⚙️ إعداداتي</div>
     </div>
     <div id="parentContent"></div>
   </div>
@@ -6260,6 +6261,72 @@ function switchParentTab(tab,btn){
   else if(tab==='grades') renderParentGrades(student);
   else if(tab==='payments') renderParentPayments(student);
   else if(tab==='schedule') renderParentSchedule(student);
+  else if(tab==='settings') renderParentSettings(student);
+}
+
+function renderParentSettings(student){
+  const div=document.getElementById('parentContent'); if(!div)return;
+  const account=(DB.parentAccounts||[]).find(p=>p.studentId===student.id);
+  div.innerHTML=`
+    <div style="max-width:500px;margin:0 auto;">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;">
+        <div class="section-title">👤 بياناتي</div>
+        <div style="font-size:.85rem;margin-bottom:6px;color:var(--txt2);">📧 البريد: <strong style="color:var(--gold2);">${account?.email||'—'}</strong></div>
+        <div style="font-size:.85rem;color:var(--txt2);">👨‍🎓 الطالب: <strong style="color:var(--gold2);">${student.name}</strong></div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+        <div class="section-title">🔑 تغيير كلمة المرور</div>
+        <div class="form-group">
+          <label class="form-label">كلمة المرور الحالية</label>
+          <input class="form-input" id="parentOldPass" type="password" placeholder="••••••••">
+        </div>
+        <div class="form-group">
+          <label class="form-label">كلمة المرور الجديدة</label>
+          <input class="form-input" id="parentNewPass" type="password" placeholder="6 أحرف على الأقل">
+        </div>
+        <div class="form-group">
+          <label class="form-label">تأكيد كلمة المرور الجديدة</label>
+          <input class="form-input" id="parentNewPass2" type="password" placeholder="نفس كلمة المرور الجديدة">
+        </div>
+        <div id="parentPassErr" style="color:var(--danger);font-size:.83rem;margin-bottom:10px;display:none;"></div>
+        <button class="btn btn-primary" style="width:100%;" onclick="changeParentPassword('${student.id}')">💾 حفظ كلمة المرور الجديدة</button>
+      </div>
+    </div>`;
+}
+
+function changeParentPassword(studentId){
+  const account=(DB.parentAccounts||[]).find(p=>p.studentId===studentId);
+  const errEl=document.getElementById('parentPassErr');
+  const oldPass=document.getElementById('parentOldPass').value.trim();
+  const newPass=document.getElementById('parentNewPass').value.trim();
+  const newPass2=document.getElementById('parentNewPass2').value.trim();
+
+  errEl.style.display='none';
+
+  if(!oldPass||!newPass||!newPass2){
+    errEl.style.display='block'; errEl.textContent='❌ أدخل كل الحقول'; return;
+  }
+  if(account?.password!==oldPass){
+    errEl.style.display='block'; errEl.textContent='❌ كلمة المرور الحالية غلط'; return;
+  }
+  if(newPass.length<6){
+    errEl.style.display='block'; errEl.textContent='❌ كلمة المرور لازم تكون 6 أحرف على الأقل'; return;
+  }
+  if(newPass!==newPass2){
+    errEl.style.display='block'; errEl.textContent='❌ كلمة المرور الجديدة غير متطابقة'; return;
+  }
+
+  // حفظ الباسورد الجديد
+  account.password=newPass;
+  const s=DB.students.find(x=>x.id===studentId);
+  saveDB();
+  showToast('✅ تم تغيير كلمة المرور بنجاح','success');
+  document.getElementById('parentOldPass').value='';
+  document.getElementById('parentNewPass').value='';
+  document.getElementById('parentNewPass2').value='';
+  errEl.style.display='block';
+  errEl.style.color='var(--success)';
+  errEl.textContent='✅ تم تغيير كلمة المرور بنجاح';
 }
 
 function renderParentOverview(student){
@@ -6367,9 +6434,29 @@ function renderParentSchedule(student){
   </table></div>`:`<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-txt">لا جدول مسجل بعد</div></div>`;
 }
 
+function generateParentPassword(studentName){
+  // باسورد تلقائي فريد من اسم الطالب + أرقام عشوائية
+  const namePart=studentName.split(' ')[0].replace(/\s/g,'').slice(0,4);
+  const nums=Math.floor(1000+Math.random()*9000);
+  return namePart+nums;
+}
+
+function generateParentEmail(studentName, studentCode){
+  // إيميل تلقائي من اسم الطالب + كوده
+  const namePart=studentName.split(' ').map(w=>w.charAt(0)).join('').toLowerCase().replace(/[^a-z]/g,'');
+  const code=(studentCode||'').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+  const center=(DB.settings.centerName||'qaisar').replace(/\s/g,'').toLowerCase().slice(0,6);
+  return `${namePart||'parent'}${code||Math.floor(1000+Math.random()*9000)}@${center}.com`;
+}
+
 function openAddParentAccount(studentId){
   const s=DB.students.find(x=>x.id===studentId); if(!s)return;
   const existing=(DB.parentAccounts||[]).find(p=>p.studentId===studentId);
+
+  // توليد بيانات تلقائية
+  const autoEmail=existing?.email||s.parentEmail||generateParentEmail(s.name,s.code);
+  const autoPass=existing?.password||generateParentPassword(s.name);
+
   document.getElementById('modalTitle').textContent=`👨‍👩‍👦 حساب ولي أمر — ${s.name}`;
   document.getElementById('modalBody').innerHTML=`
     ${existing?`<div style="background:rgba(39,174,96,.1);border:1px solid rgba(39,174,96,.3);border-radius:10px;padding:12px;margin-bottom:12px;font-size:.83rem;">
@@ -6377,12 +6464,24 @@ function openAddParentAccount(studentId){
       <br><button class="btn btn-xs btn-success" style="margin-top:8px;" onclick="sendParentCredentialsWA('${studentId}','${existing.email}','')">📲 إرسال البيانات على واتساب</button>
     </div>`:''}
     <div style="background:rgba(41,128,185,.1);border:1px solid rgba(41,128,185,.3);border-radius:10px;padding:12px;margin-bottom:12px;font-size:.83rem;color:var(--txt2);">
-      💡 ادخل إيميل وكلمة مرور لولي أمر <strong style="color:var(--gold2)">${s.name}</strong>
+      💡 البيانات تم توليدها تلقائياً من اسم الطالب — يمكنك تعديلها
     </div>
     <div class="form-row">
-      <div class="form-group full"><label class="form-label">البريد الإلكتروني *</label><input class="form-input" id="parentAccEmail" type="email" placeholder="example@gmail.com" dir="ltr" value="${existing?.email||s.parentEmail||''}"></div>
-      <div class="form-group"><label class="form-label">كلمة المرور *</label><input class="form-input" id="parentAccPass" type="text" placeholder="6 أحرف على الأقل" value="${s.code||''}"></div>
-      <div class="form-group"><label class="form-label">تأكيد كلمة المرور</label><input class="form-input" id="parentAccPass2" type="text" placeholder="نفس كلمة المرور"></div>
+      <div class="form-group full">
+        <label class="form-label">البريد الإلكتروني *</label>
+        <div style="display:flex;gap:8px;">
+          <input class="form-input" id="parentAccEmail" type="email" dir="ltr" value="${autoEmail}" style="flex:1;">
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('parentAccEmail').value=generateParentEmail('${s.name}','${s.code||''}')">🔄</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">كلمة المرور *</label>
+        <div style="display:flex;gap:8px;">
+          <input class="form-input" id="parentAccPass" type="text" value="${autoPass}" style="flex:1;">
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('parentAccPass').value=generateParentPassword('${s.name}');document.getElementById('parentAccPass2').value=document.getElementById('parentAccPass').value;">🔄</button>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">تأكيد كلمة المرور</label><input class="form-input" id="parentAccPass2" type="text" value="${autoPass}"></div>
     </div>`;
   document.getElementById('modalFooter').innerHTML=`<button class="btn btn-primary" onclick="createParentAccount('${studentId}')">✅ إنشاء / تحديث</button><button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>`;
   document.getElementById('modalOverlay').classList.add('show');
@@ -6399,7 +6498,6 @@ function createParentAccount(studentId){
   const saveAndNotify=()=>{
     DB.parentAccounts=DB.parentAccounts||[];
     const existing=DB.parentAccounts.findIndex(p=>p.studentId===studentId);
-    // حفظ كلمة المرور في DB عشان تظهر في صفحة المدير
     const account={id:existing>-1?DB.parentAccounts[existing].id:uid(),studentId,email,password:pass,createdAt:new Date().toISOString(),createdBy:currentUser?.name};
     if(existing>-1) DB.parentAccounts[existing]=account;
     else DB.parentAccounts.push(account);
@@ -6433,17 +6531,14 @@ function sendParentCredentialsWA(studentId, email, pass){
   const s=DB.students.find(x=>x.id===studentId); if(!s)return;
   const phone=s.phone;
   if(!phone){showToast('لا يوجد رقم هاتف لولي الأمر','warning');return;}
-  // لو الباسورد مش متبعت — جيبه من DB
   const account=(DB.parentAccounts||[]).find(p=>p.studentId===studentId);
   const finalPass=pass&&pass!=='••••••'?pass:(account?.password||'');
   const center=DB.settings.centerName||'سنتر القيصر';
-  const siteUrl='qaisar-center.netlify.app';
-  const msg=`السلام عليكم 🌟\n\n*${center}*\n\nتم إنشاء حسابك على بوابة أولياء الأمور لمتابعة ابنك *${s.name}* 👨‍👩‍👦\n\n🔗 رابط البرنامج:\n${siteUrl}\n\n📧 البريد الإلكتروني:\n${email}\n\n🔑 كلمة المرور:\n${finalPass||'(كلمة المرور التي تم تحديدها)'}\n\n*خطوات الدخول:*\n١. افتح الرابط\n٢. اضغط "دخول ولي الأمر"\n٣. أدخل البريد وكلمة المرور\n\nمن خلال حسابك تقدر تتابع:\n✅ الحضور والغياب\n📝 نتائج الامتحانات\n💰 حالة المدفوعات\n📅 الجدول الدراسي\n\nللمساعدة تواصل معنا 🙏`;
-  const clean=phone.replace(/\D/g,'').replace(/^0/,'');
-  let waPhone;
-      if(clean.startsWith('20')) waPhone=clean;
-      else if(clean.startsWith('0')) waPhone='2'+clean;
-      else waPhone='20'+clean;
+  // رابط GitHub Pages
+  const siteUrl='desgin2026-code.github.io/qaisar';
+  const msg=`السلام عليكم 🌟\n\n*${center}*\n\nتم إنشاء حسابك على بوابة أولياء الأمور لمتابعة ابنك *${s.name}* 👨‍👩‍👦\n\n🔗 رابط البرنامج:\nhttps://${siteUrl}\n\n📧 البريد الإلكتروني:\n${email}\n\n🔑 كلمة المرور:\n${finalPass||'(كلمة المرور التي تم تحديدها)'}\n\n*خطوات الدخول:*\n١. افتح الرابط\n٢. اضغط "دخول ولي الأمر"\n٣. أدخل البريد وكلمة المرور\n\nمن خلال حسابك تقدر تتابع:\n✅ الحضور والغياب\n📝 نتائج الامتحانات\n💰 حالة المدفوعات\n📅 الجدول الدراسي\n\nللمساعدة تواصل معنا 🙏`;
+  const clean=phone.replace(/\D/g,'');
+  let waPhone=clean.startsWith('20')?clean:clean.startsWith('0')?'2'+clean:'20'+clean;
   window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`,'_blank');
   closeModal();
   showToast('✅ تم فتح واتساب بالرسالة الجاهزة','success');
