@@ -6435,18 +6435,27 @@ function renderParentSchedule(student){
 }
 
 function generateParentPassword(studentName){
-  // باسورد تلقائي فريد من اسم الطالب + أرقام عشوائية
-  const namePart=studentName.split(' ')[0].replace(/\s/g,'').slice(0,4);
-  const nums=Math.floor(1000+Math.random()*9000);
-  return namePart+nums;
+  // 6 أرقام عشوائية
+  return String(Math.floor(100000+Math.random()*900000));
 }
 
 function generateParentEmail(studentName, studentCode){
-  // إيميل تلقائي من اسم الطالب + كوده
-  const namePart=studentName.split(' ').map(w=>w.charAt(0)).join('').toLowerCase().replace(/[^a-z]/g,'');
-  const code=(studentCode||'').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+  // تحويل اسم الطالب للإنجليزي
+  const arabicToEng={
+    'ا':'a','أ':'a','إ':'a','آ':'a','ب':'b','ت':'t','ث':'th','ج':'g','ح':'h','خ':'kh',
+    'د':'d','ذ':'z','ر':'r','ز':'z','س':'s','ش':'sh','ص':'s','ض':'d','ط':'t','ظ':'z',
+    'ع':'a','غ':'gh','ف':'f','ق':'q','ك':'k','ل':'l','م':'m','ن':'n','ه':'h','و':'w',
+    'ي':'y','ى':'a','ة':'a','ء':'a','ئ':'y','ؤ':'w','لا':'la'
+  };
+  const nameEng=studentName.trim().split(' ').map(word=>{
+    let eng='';
+    for(let i=0;i<word.length;i++){
+      eng+=arabicToEng[word[i]]||'';
+    }
+    return eng||word;
+  }).join('.');
   const center=(DB.settings.centerName||'qaisar').replace(/\s/g,'').toLowerCase().slice(0,6);
-  return `${namePart||'parent'}${code||Math.floor(1000+Math.random()*9000)}@${center}.com`;
+  return `${nameEng.toLowerCase()||'parent'}@${center}.com`;
 }
 
 function openAddParentAccount(studentId){
