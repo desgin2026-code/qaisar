@@ -390,12 +390,12 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
       <div class="login-sub">👑 سنتر القيصر</div>
     </div>
     <div class="form-group">
-      <label class="form-label">البريد الإلكتروني</label>
-      <input type="email" id="parentEmail" class="form-input" placeholder="example@email.com" dir="ltr" autocomplete="email" onkeydown="if(event.key==='Enter')doParentLogin()">
+      <label class="form-label">البريد الإلكتروني <span style="font-size:.75rem;color:var(--txt3);">(اختياري)</span></label>
+      <input type="email" id="parentEmail" class="form-input" placeholder="اختياري" dir="ltr" autocomplete="email" onkeydown="if(event.key==='Enter')doParentLogin()">
     </div>
     <div class="form-group">
-      <label class="form-label">كلمة المرور</label>
-      <input type="password" id="parentPass" class="form-input" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doParentLogin()">
+      <label class="form-label">كلمة المرور <span style="font-size:.75rem;color:var(--gold2);">*</span></label>
+      <input type="password" id="parentPass" class="form-input" placeholder="أدخل كلمة المرور" autocomplete="current-password" onkeydown="if(event.key==='Enter')doParentLogin()">
     </div>
     <button class="btn-login" id="parentLoginBtn" onclick="doParentLogin()">🔐 دخول</button>
     <div class="login-err" id="parentLoginErr">❌ البريد أو كلمة المرور غلط</div>
@@ -6195,28 +6195,39 @@ function doParentLogin(){
   const emailRaw=document.getElementById('parentEmail').value.trim();
   const pass=document.getElementById('parentPass').value.trim();
   const errEl=document.getElementById('parentLoginErr');
-  const email=emailRaw.toLowerCase();
-
-  // Reset error
   errEl.style.display='none';
 
-  if(!email||!pass){
+  if(!pass){
     errEl.style.display='block'; errEl.style.color='var(--danger)';
-    errEl.textContent='❌ أدخل البريد وكلمة المرور'; return;
+    errEl.textContent='❌ أدخل كلمة المرور'; return;
   }
 
-  // ===== تحقق من DB المحلية أولاً وبس =====
   const accounts=DB.parentAccounts||[];
-  const account=accounts.find(p=>p.email&&p.email.toLowerCase()===email);
+
+  // أولاً: بحث بالإيميل وكلمة المرور
+  let account=null;
+  if(emailRaw){
+    const email=emailRaw.toLowerCase();
+    account=accounts.find(p=>p.email&&p.email.toLowerCase()===email&&p.password===pass);
+  }
+
+  // ثانياً: لو مفيش إيميل أو مش لاقي — ابحث بكلمة المرور بس
+  if(!account){
+    account=accounts.find(p=>p.password===pass);
+  }
 
   if(!account){
+    // لو في إيميل بس الباسورد غلط
+    if(emailRaw){
+      const email=emailRaw.toLowerCase();
+      const byEmail=accounts.find(p=>p.email&&p.email.toLowerCase()===email);
+      if(byEmail){
+        errEl.style.display='block'; errEl.style.color='var(--danger)';
+        errEl.textContent='❌ كلمة المرور غلط'; return;
+      }
+    }
     errEl.style.display='block'; errEl.style.color='var(--danger)';
-    errEl.textContent='❌ هذا البريد غير مسجل — تواصل مع المدرس'; return;
-  }
-
-  if(account.password!==pass){
-    errEl.style.display='block'; errEl.style.color='var(--danger)';
-    errEl.textContent='❌ كلمة المرور غلط'; return;
+    errEl.textContent='❌ كلمة المرور غلط أو غير مسجل — تواصل مع المدرس'; return;
   }
 
   const student=DB.students.find(x=>x.id===account.studentId);
