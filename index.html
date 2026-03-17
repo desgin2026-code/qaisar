@@ -423,6 +423,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
       <div class="inner-tab" onclick="switchParentTab('grades',this)">📝 الدرجات</div>
       <div class="inner-tab" onclick="switchParentTab('payments',this)">💰 المدفوعات</div>
       <div class="inner-tab" onclick="switchParentTab('schedule',this)">📅 الجدول</div>
+      <div class="inner-tab" onclick="switchParentTab('notifications',this)" id="parentNotifTab">🔔 الإشعارات</div>
       <div class="inner-tab" onclick="switchParentTab('settings',this)">⚙️ إعداداتي</div>
     </div>
     <div id="parentContent"></div>
@@ -1049,7 +1050,7 @@ function initDB(){
     notifications:[],files:[],schedule:[],
     employees:[],empAttendance:[],empLeaves:[],
     accounting:[],cashbox:{balance:0,transactions:[]},
-    tasks:[],parentAccounts:[],sentMessages:{},
+    tasks:[],parentAccounts:[],sentMessages:{},parentNotifications:[],
     settings:{
       centerName:'سنتر القيصر',teacherName:'القيصر أحمد حسن',
       grades:['الأول الإعدادي','الثاني الإعدادي','الثالث الإعدادي',
@@ -1899,6 +1900,9 @@ function setAttend(sid,gid,date,status,btn){
   if(s?.phone && DB.settings.autoWAAttend){
     sendWAMsg(s.phone, status==='present'?'present':'absent', s.name, date);
   }
+  // إشعار لولي الأمر
+  if(s) addParentNotification(s.id, status==='present'?'attend_present':'attend_absent',
+    `${status==='present'?'✅ حضر':'❌ غاب'} الطالب ${s.name} اليوم ${fmtDate(date)}`);
 }
 
 function markAll(gid,date,status){
@@ -2055,12 +2059,13 @@ function saveExam(){
   DB.exams.push({id:uid(),name,date:document.getElementById('eDate').value,groupId:gid,total,grades,createdBy:currentUser?.name});
   logActivity('إضافة امتحان',name);
   saveDB(); closeModal(); renderExams(); showToast('تم حفظ الامتحان','success');
-  // Auto notify students with low grades
+  // إشعارات لأولياء الأمور + تنبيهات تراجع
   grades.forEach(g=>{
     const pct=(g.score/total)*100;
-    if(pct<50){
-      const s=DB.students.find(x=>x.id===g.studentId);
-      if(s) addNotification(`تراجع مستوى - ${s.name}`,`حصل على ${g.score} من ${total} في ${name}`,'warn');
+    const s=DB.students.find(x=>x.id===g.studentId);
+    if(s){
+      addParentNotification(s.id,'exam',`📝 نتيجة ${name}: ${g.score}/${total} (${Math.round(pct)}%)`);
+      if(pct<50) addNotification(`تراجع مستوى - ${s.name}`,`حصل على ${g.score} من ${total} في ${name}`,'warn');
     }
   });
 }
@@ -2387,6 +2392,9 @@ function savePayment(){
   saveDB(); closeModal(); renderPayments(); updateBadges();
   showToast('تم تسجيل الدفعة وإضافتها للخزنة ✅','success');
   if(s?.phone) sendWAMsg(s.phone,'payment',s.name,month);
+  // إشعار لولي الأمر
+  if(s&&(status==='paid'||status==='partial'))
+    addParentNotification(s.id,'payment',`💰 تم تسجيل دفعة ${fmtMoney(amount)} لشهر ${month}`);
   // Show receipt
   setTimeout(()=>showPaymentReceipt(pay,s),300);
 }
@@ -6248,9 +6256,23 @@ function openParentPortal(student){
   const app=document.getElementById('parentApp');
   app.style.display='flex';
   document.getElementById('parentStudentName').textContent=`👤 ${student.name}`;
-  // Store current student
   window._parentStudent=student;
+
+  // عرض عدد الإشعارات غير المقروءة
+  const unread=getParentUnreadCount(student.id);
+  const notifTab=document.getElementById('parentNotifTab');
+  if(notifTab) notifTab.innerHTML=`🔔 الإشعارات${unread>0?` <span style="background:var(--danger);color:#fff;border-radius:50%;padding:1px 6px;font-size:.72rem;margin-right:4px;">${unread}</span>`:''}`;
+
   renderParentOverview(student);
+
+  // طلب إذن إشعارات المتصفح
+  if('Notification' in window && Notification.permission==='default'){
+    setTimeout(()=>{
+      Notification.requestPermission().then(perm=>{
+        if(perm==='granted') showToast('✅ تم تفعيل الإشعارات — ستصلك تنبيهات فورية','success');
+      });
+    }, 2000);
+  }
 }
 
 function doParentLogout(){
@@ -6272,6 +6294,7 @@ function switchParentTab(tab,btn){
   else if(tab==='grades') renderParentGrades(student);
   else if(tab==='payments') renderParentPayments(student);
   else if(tab==='schedule') renderParentSchedule(student);
+  else if(tab==='notifications') renderParentNotifications(student);
   else if(tab==='settings') renderParentSettings(student);
 }
 
@@ -6301,6 +6324,11 @@ function renderParentSettings(student){
         </div>
         <div id="parentPassErr" style="color:var(--danger);font-size:.83rem;margin-bottom:10px;display:none;"></div>
         <button class="btn btn-primary" style="width:100%;" onclick="changeParentPassword('${student.id}')">💾 حفظ كلمة المرور الجديدة</button>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:16px;">
+        <div class="section-title">🔔 إشعارات المتصفح</div>
+        <div style="font-size:.82rem;color:var(--txt2);margin-bottom:12px;">فعّل الإشعارات عشان توصلك تنبيهات فورية على تليفونك حتى لو البوابة مش مفتوحة</div>
+        <button class="btn btn-info" style="width:100%;" onclick="requestParentPushPermission()">🔔 تفعيل الإشعارات</button>
       </div>
     </div>`;
 }
@@ -6565,6 +6593,84 @@ function sendParentCredentialsWA(studentId, email, pass){
 }
 
 
+
+// ============================================================
+// ========= إشعارات أولياء الأمور ===========================
+// ============================================================
+function addParentNotification(studentId, type, message){
+  DB.parentNotifications=DB.parentNotifications||[];
+  const notif={
+    id:uid(),
+    studentId,
+    type,
+    message,
+    createdAt:new Date().toISOString(),
+    read:false
+  };
+  DB.parentNotifications.push(notif);
+  saveDB();
+  // إشعار المتصفح لو مفعّل
+  sendBrowserPushToParent(studentId, message);
+}
+
+function sendBrowserPushToParent(studentId, message){
+  // إشعار المتصفح — بيشتغل لو ولي الأمر فاتح البوابة أو مفتوحاً المتصفح
+  if(!('Notification' in window)) return;
+  if(Notification.permission==='granted'){
+    const s=DB.students.find(x=>x.id===studentId);
+    new Notification(`👑 سنتر القيصر — ${s?.name||''}`,{
+      body: message,
+      icon: '/favicon.ico',
+      badge: '/favicon.ico'
+    });
+  }
+}
+
+function requestParentPushPermission(){
+  if(!('Notification' in window)){
+    showToast('متصفحك لا يدعم الإشعارات','warning'); return;
+  }
+  if(Notification.permission==='granted'){
+    showToast('✅ الإشعارات مفعّلة بالفعل','success'); return;
+  }
+  Notification.requestPermission().then(perm=>{
+    if(perm==='granted') showToast('✅ تم تفعيل الإشعارات','success');
+    else showToast('تم رفض الإشعارات — يمكن تفعيلها من إعدادات المتصفح','warning');
+  });
+}
+
+function getParentUnreadCount(studentId){
+  return (DB.parentNotifications||[]).filter(n=>n.studentId===studentId&&!n.read).length;
+}
+
+function markParentNotifsRead(studentId){
+  (DB.parentNotifications||[]).filter(n=>n.studentId===studentId&&!n.read).forEach(n=>n.read=true);
+  saveDB();
+}
+
+function renderParentNotifications(student){
+  const div=document.getElementById('parentContent'); if(!div)return;
+  const notifs=[...(DB.parentNotifications||[]).filter(n=>n.studentId===student.id)]
+    .sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  markParentNotifsRead(student.id);
+
+  const typeIcon={attend_present:'✅',attend_absent:'❌',payment:'💰',exam:'📝'};
+
+  div.innerHTML=`
+    <div style="max-width:600px;margin:0 auto;">
+      ${notifs.length===0?`<div class="empty-state"><div class="empty-icon">🔔</div><div class="empty-txt">لا إشعارات بعد</div></div>`:`
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${notifs.map(n=>`
+          <div style="background:var(--bg2);border:1px solid ${n.read?'var(--border)':'rgba(201,162,39,.4)'};border-radius:12px;padding:14px;display:flex;gap:12px;align-items:flex-start;">
+            <span style="font-size:1.4rem;">${typeIcon[n.type]||'🔔'}</span>
+            <div style="flex:1;">
+              <div style="font-size:.88rem;font-weight:600;">${n.message}</div>
+              <div style="font-size:.75rem;color:var(--txt3);margin-top:4px;">${new Date(n.createdAt).toLocaleString('ar-EG')}</div>
+            </div>
+          </div>`).join('')}
+      </div>`}
+    </div>`;
+}
 
 let deferredInstallPrompt=null;
 
