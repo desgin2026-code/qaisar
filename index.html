@@ -441,7 +441,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
       <div class="header-date" id="headerDate"></div>
       <input type="date" id="globalDate" class="select-date" style="font-size:.75rem;" title="تغيير التاريخ">
       <button class="header-btn" onclick="refreshAll()">🔄 تحديث</button>
-      <div id="syncIndicator" style="font-size:.72rem;color:var(--success);padding:4px 10px;background:rgba(39,174,96,.1);border:1px solid rgba(39,174,96,.2);border-radius:8px;transition:opacity 1s;opacity:0;white-space:nowrap;">✅ تمت المزامنة</div>
+      <div id="syncIndicator" style="font-size:.72rem;color:var(--txt3);padding:4px 10px;background:rgba(26,48,80,.4);border:1px solid rgba(201,162,39,.15);border-radius:8px;white-space:nowrap;cursor:pointer;" onclick="showTab('settings');setTimeout(()=>document.getElementById('syncPanelContent')&&renderSyncPanel(),300);" title="اضغط لإعدادات المزامنة">⏳ جاري الاتصال...</div>
       <div class="header-user" id="headerUser" onclick="showUserMenu()">
         <div class="user-avatar" id="userAvatarH" style="overflow:hidden;">A</div>
         <span id="headerUserName">مدير</span>
@@ -917,10 +917,9 @@ let fbLastPush = 0;
 
 function initFirebase(){
   if(typeof firebase === 'undefined'){
-    setTimeout(initFirebase, 800);
+    setTimeout(initFirebase, 1000);
     return;
   }
-  // لو Firebase شغال بالفعل — مش محتاج نعمله تاني
   if(fbSyncEnabled && fbDB){
     showSyncIndicator('🔥 Firebase متصل');
     return;
@@ -931,54 +930,63 @@ function initFirebase(){
     } else {
       fbApp = firebase.app();
     }
-    // لو fbDB موجود بالفعل — استخدمه من غير ما نعمل persistence تاني
     if(!fbDB){
       fbDB = firebase.firestore(fbApp);
-      fbDB.enablePersistence({synchronizeTabs:true}).catch(e=>{
-        // Persistence error is OK - Firestore still works
-        console.warn('Persistence skipped:', e.code);
-      });
+      // ❌ بلاش enablePersistence — بتعمل مشكلة على التليفون
+      // الـ localStorage بيعمل نفس الوظيفة
     }
     fbSyncEnabled = true;
-    initFirebaseAuth();
+    // Anonymous sign-in عشان Firestore يشتغل على كل الأجهزة
+    try {
+      const auth = firebase.auth(fbApp);
+      auth.signInAnonymously().catch(()=>{});
+      fbAuth = auth;
+    } catch(e){}
     startFirebaseListener();
     showSyncIndicator('🔥 Firebase متصل');
-    setTimeout(pushToFirebase, 2000);
+    setTimeout(pushToFirebase, 1500);
   } catch(e){
     fbSyncEnabled = false;
-    console.warn('Firebase init failed:', e.code, e.message);
-    // Retry after 5 seconds
+    console.warn('Firebase init failed:', e.message);
     setTimeout(initFirebase, 5000);
   }
 }
 
 function startFirebaseListener(){
   if(!fbDB) return;
-  // Listen for changes from other devices
   if(fbUnsubscribe) fbUnsubscribe();
   fbUnsubscribe = fbDB.collection('centers').doc('qaisar_main')
     .onSnapshot(doc => {
       if(!doc.exists) return;
       const data = doc.data();
       if(!data || !data.db) return;
-      // Only update if change came from another device
       const remoteTime = data.updatedAt || 0;
+      // استقبل التحديث لو جاي من جهاز تاني
       if(remoteTime > fbLastPush + 2000){
         try {
           const remoteDB = JSON.parse(data.db);
-          // Merge carefully - don't overwrite local if same time
           DB = remoteDB;
           localStorage.setItem(STORE_KEY, JSON.stringify(DB));
-          // Refresh current view
           const activeTab = document.querySelector('.nav-item.active')?.dataset?.tab;
           if(activeTab && activeTab !== 'settings') renderTab(activeTab);
           updateBadges();
-          showSyncIndicator('📡 تم استقبال تحديث من جهاز آخر');
+          const device = data.updatedBy||'جهاز آخر';
+          showSyncIndicator(`📡 تحديث من ${device}`);
         } catch(e){ console.warn('Firebase parse error', e); }
+      } else {
+        showSyncIndicator('✅ Firebase متصل');
       }
     }, err => {
-      console.warn('Firebase listener error:', err);
-      showSyncIndicator('⚠️ انقطع اتصال المزامنة');
+      console.warn('Firebase listener error:', err.code, err.message);
+      if(err.code==='permission-denied'){
+        showSyncIndicator('🔒 راجع Firestore Rules في الإعدادات');
+      } else {
+        showSyncIndicator('⚠️ انقطع — جاري إعادة الاتصال');
+        // إعادة المحاولة بعد 10 ثواني
+        setTimeout(()=>{
+          if(fbDB) startFirebaseListener();
+        }, 10000);
+      }
     });
 }
 
@@ -1015,11 +1023,13 @@ function pushToFirebase(){
     updatedBy: currentUser?.name || 'unknown',
     device: navigator.userAgent.slice(0,50)
   }).then(()=>{
-    showSyncIndicator('✅ تمت المزامنة');
+    const t=new Date().toLocaleTimeString('ar-EG');
+    showSyncIndicator(`✅ تمت المزامنة — ${t}`);
+    localStorage.setItem('qaisar_last_sync', new Date().toLocaleString('ar-EG'));
   }).catch(e=>{
     console.warn('Firebase push error:', e.code, e.message);
     if(e.code==='permission-denied'){
-      showSyncIndicator('🔒 راجع Firestore Rules');
+      showSyncIndicator('🔒 Firestore Rules محظورة — راجع الإعدادات');
     } else if(e.code==='unavailable'){
       showSyncIndicator('📴 لا إنترنت — محفوظ محلياً');
     } else {
@@ -1032,9 +1042,92 @@ function showSyncIndicator(msg){
   const el = document.getElementById('syncIndicator');
   if(el){
     el.textContent = msg;
-    el.style.opacity = '1';
-    setTimeout(()=>{ el.style.opacity = '0'; }, 3000);
+    // color based on status
+    if(msg.includes('✅')||msg.includes('متصل')||msg.includes('مزامنة')){
+      el.style.color='var(--success)';
+      el.style.borderColor='rgba(39,174,96,.3)';
+      el.style.background='rgba(39,174,96,.08)';
+    } else if(msg.includes('❌')||msg.includes('فشل')||msg.includes('🔴')||msg.includes('خطأ')){
+      el.style.color='var(--danger)';
+      el.style.borderColor='rgba(192,57,43,.3)';
+      el.style.background='rgba(192,57,43,.08)';
+    } else if(msg.includes('⚠️')||msg.includes('🔒')||msg.includes('Rules')){
+      el.style.color='var(--warn)';
+      el.style.borderColor='rgba(230,126,34,.3)';
+      el.style.background='rgba(230,126,34,.08)';
+    } else {
+      el.style.color='var(--txt3)';
+      el.style.borderColor='rgba(201,162,39,.15)';
+      el.style.background='rgba(26,48,80,.4)';
+    }
   }
+  // Also update live status in settings if open
+  const liveEl=document.getElementById('fbLiveStatus');
+  if(liveEl){
+    const isOk=msg.includes('✅')||msg.includes('متصل')||msg.includes('مزامنة');
+    liveEl.innerHTML=`<span style="color:${isOk?'var(--success)':'var(--danger)'};">${msg}</span>`;
+  }
+}
+
+async function testFirebaseConnection(){
+  const box=document.getElementById('fbDiagBox');
+  if(!box) return;
+  box.style.display='block';
+  box.innerHTML=`<div style="color:var(--gold2);">⏳ جاري اختبار الاتصال...</div>`;
+  const results=[];
+  // Test 1: Firebase loaded?
+  if(typeof firebase==='undefined'){
+    results.push('❌ Firebase SDK غير محمّل — تأكد من الإنترنت');
+  } else {
+    results.push('✅ Firebase SDK محمّل بنجاح');
+  }
+  // Test 2: fbDB connected?
+  if(!fbDB){
+    results.push('❌ Firestore غير متصل — اضغط "إعادة الاتصال"');
+  } else {
+    results.push('✅ Firestore متصل');
+  }
+  // Test 3: Try a test write
+  if(fbDB){
+    try {
+      await fbDB.collection('_test').doc('ping').set({ts: Date.now()});
+      results.push('✅ الكتابة على Firestore تعمل — المزامنة شغّالة 🎉');
+    } catch(e) {
+      if(e.code==='permission-denied'){
+        results.push('❌ Firestore Rules محظورة — اتبع الخطوات في "لو المزامنة مش شغالة"');
+      } else if(e.code==='unavailable'){
+        results.push('❌ لا يوجد إنترنت الآن');
+      } else {
+        results.push(`❌ خطأ: ${e.code||e.message}`);
+      }
+    }
+    // Test 4: Try a test read
+    try {
+      await fbDB.collection('centers').doc('qaisar_main').get();
+      results.push('✅ القراءة من Firestore تعمل');
+    } catch(e) {
+      results.push(`❌ فشل القراءة: ${e.code}`);
+    }
+  }
+  // Test 5: fbSyncEnabled?
+  results.push(fbSyncEnabled ? '✅ المزامنة التلقائية مفعّلة' : '⚠️ المزامنة التلقائية معطّلة');
+  box.innerHTML=results.map(r=>`<div style="margin-bottom:5px;">${r}</div>`).join('');
+}
+
+function copyFirestoreRules(){
+  const rules=`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}`;
+  navigator.clipboard?.writeText(rules).then(()=>{
+    showToast('✅ تم نسخ الـ Rules — الصقها في Firebase','success');
+  }).catch(()=>{
+    prompt('انسخ الكود ده يدوياً:',rules);
+  });
 }
 
 // Override saveDB to also push to Firebase
@@ -4506,8 +4599,8 @@ function renderSyncPanel(){
   const el=document.getElementById('syncPanelContent');
   if(!el) return;
   const fbStatus=fbSyncEnabled
-    ? `<span style="color:var(--success);">🟢 متصل ومزامنة تلقائية مفعّلة</span>`
-    : `<span style="color:var(--danger);">🔴 غير متصل — تحقق من الإنترنت</span>`;
+    ? `<span style="color:var(--success);">🟢 متصل — المزامنة تعمل تلقائياً</span>`
+    : `<span style="color:var(--danger);">🔴 غير متصل</span>`;
   el.innerHTML=`
     <!-- Firebase Realtime Sync -->
     <div style="background:linear-gradient(135deg,rgba(41,128,185,.15),rgba(41,128,185,.05));border:2px solid rgba(41,128,185,.4);border-radius:14px;padding:16px;margin-bottom:16px;">
@@ -4515,49 +4608,49 @@ function renderSyncPanel(){
         <div style="font-size:1.6rem;">🔥</div>
         <div>
           <div style="font-weight:700;color:var(--info);font-size:.95rem;">Firebase — مزامنة فورية تلقائية</div>
-          <div style="font-size:.78rem;color:var(--txt2);">أي تغيير يظهر فوراً على كل الأجهزة</div>
+          <div style="font-size:.78rem;color:var(--txt2);">أي تغيير يظهر فوراً على الكومبيوتر والتليفون</div>
         </div>
-        <div style="margin-right:auto;font-size:.8rem;">${fbStatus}</div>
+        <div style="margin-right:auto;font-size:.8rem;" id="fbLiveStatus">${fbStatus}</div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px;text-align:center;font-size:.78rem;">
-          <div style="color:var(--gold2);font-weight:700;font-size:1rem;">📱↔️🖥️</div>
-          <div style="color:var(--txt2);margin-top:4px;">تليفون + كمبيوتر</div>
-        </div>
-        <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px;text-align:center;font-size:.78rem;">
-          <div style="color:var(--success);font-weight:700;font-size:1rem;">⚡ فوري</div>
-          <div style="color:var(--txt2);margin-top:4px;">أقل من ثانية</div>
-        </div>
-        <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px;text-align:center;font-size:.78rem;">
-          <div style="color:var(--gold2);font-weight:700;font-size:1rem;">🆓 مجاني</div>
-          <div style="color:var(--txt2);margin-top:4px;">Firebase مجاني</div>
-        </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="pushToFirebase();showToast('جاري الرفع...','info');">📤 رفع البيانات الآن</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="testFirebaseConnection()">🔍 اختبار الاتصال</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="fbSyncEnabled=false;if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}fbDB=null;initFirebase();showToast('جاري إعادة الاتصال...','info');">🔄 إعادة الاتصال</button>
       </div>
-      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-info" style="flex:1;" onclick="pushToFirebase();showToast('جاري الإرسال...','info');">📤 رفع البيانات الآن</button>
-        <button class="btn btn-secondary" style="flex:1;" onclick="fbSyncEnabled=false;if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}initFirebase();showToast('جاري إعادة الاتصال...','info');">🔄 إعادة الاتصال</button>
+      <div id="fbDiagBox" style="display:none;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;font-size:.78rem;margin-bottom:12px;"></div>
+      <!-- Firestore Rules Fix -->
+      <div style="background:rgba(230,126,34,.08);border:1px solid rgba(230,126,34,.3);border-radius:10px;padding:12px;">
+        <div style="font-weight:700;color:var(--warn);margin-bottom:8px;font-size:.83rem;">⚙️ لو المزامنة مش شغالة — اعمل كده:</div>
+        <div style="font-size:.78rem;color:var(--txt2);line-height:1.9;">
+          1. افتح <strong style="color:var(--gold2);">console.firebase.google.com</strong><br>
+          2. اختار مشروعك: <strong style="color:var(--gold2);">qaisar-center1</strong><br>
+          3. اضغط <strong style="color:var(--gold2);">Firestore Database</strong> ← <strong style="color:var(--gold2);">Rules</strong><br>
+          4. امسح كل اللي فيه واحط الكود ده:
+        </div>
+        <div style="background:rgba(0,0,0,.4);border-radius:8px;padding:10px;margin-top:10px;font-family:monospace;font-size:.75rem;color:#a8e6cf;direction:ltr;text-align:left;white-space:pre-wrap;position:relative;">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}<button onclick="copyFirestoreRules()" style="position:absolute;top:8px;left:8px;background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.4);border-radius:6px;padding:3px 8px;color:var(--gold2);cursor:pointer;font-family:'Cairo',sans-serif;font-size:.72rem;">📋 نسخ</button></div>
+        <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-top:8px;">5. اضغط <strong>Publish</strong> — وبعدها اضغط "إعادة الاتصال" فوق ✅</div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-      <!-- Method 1: File export/import (offline) -->
       <div style="background:var(--bg3);border-radius:12px;padding:16px;border:1px solid rgba(39,174,96,.2);">
-        <div style="font-size:.88rem;font-weight:700;margin-bottom:10px;color:var(--success);">📁 طريقة الملف (بدون نت)</div>
+        <div style="font-size:.88rem;font-weight:700;margin-bottom:10px;color:var(--success);">📁 نسخ احتياطي يدوي (بدون نت)</div>
         <div style="font-size:.78rem;color:var(--txt2);margin-bottom:12px;line-height:1.7;">
-          1. من الكومبيوتر: اضغط "تصدير للتليفون"<br>
-          2. أرسل الملف لتليفونك (واتساب / درايف / USB)<br>
-          3. من التليفون: افتح الإعدادات ← اضغط "استيراد ملف"
+          لو مفيش إنترنت: صدّر ملف وشاركه مانويلي
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;">
-          <button class="btn btn-primary" onclick="uploadSync()">📤 تصدير للتليفون (حفظ ملف)</button>
-          <button class="btn btn-info" onclick="downloadSync()">📥 استيراد ملف من التليفون</button>
+          <button class="btn btn-primary" onclick="uploadSync()">📤 تصدير نسخة احتياطية</button>
+          <button class="btn btn-info" onclick="downloadSync()">📥 استيراد نسخة احتياطية</button>
         </div>
       </div>
-      <!-- Method 2: Auto backup + status -->
       <div style="background:var(--bg3);border-radius:12px;padding:16px;border:1px solid rgba(41,128,185,.2);">
         <div style="font-size:.88rem;font-weight:700;margin-bottom:10px;color:var(--info);">🔄 الحفظ التلقائي على الجهاز</div>
-        <div style="font-size:.78rem;color:var(--txt2);margin-bottom:12px;line-height:1.7;">
-          يحفظ بياناتك محلياً على كل جهاز كل 5 دقائق تلقائياً.
-        </div>
         <div style="background:var(--bg2);border-radius:8px;padding:10px;margin-bottom:12px;font-size:.78rem;">
           <div>آخر حفظ: <span style="color:var(--gold2);">${lastSync}</span></div>
           <div>الحالة: <span style="color:${isAuto?'var(--success)':'var(--txt3)'}">${isAuto?'🟢 تلقائي مفعّل':'⚪ يدوي'}</span></div>
@@ -4565,7 +4658,7 @@ function renderSyncPanel(){
         <button class="btn btn-secondary" id="autoSyncBtn" onclick="toggleAutoSync()" style="width:100%;">
           ${isAuto?'⏸️ إيقاف الحفظ التلقائي':'▶️ تشغيل الحفظ التلقائي (كل 5 دقائق)'}
         </button>
-        <button class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="saveDB();showToast('تم الحفظ الآن','success');">💾 حفظ الآن يدوياً</button>
+        <button class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="saveDB();showToast('تم الحفظ الآن','success');">💾 حفظ الآن</button>
       </div>
     </div>
     <div id="syncLog" style="margin-top:8px;font-size:.78rem;"></div>`;
