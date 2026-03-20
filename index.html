@@ -4796,15 +4796,38 @@ function sendWAMsg(phone,type,studentName,extra){
       const s2=DB.students.find(x=>x.name===studentName)||DB.students.find(x=>x.phone===phone);
       let reportTxt='';
       if(s2){
+        const currentMonth=today().slice(0,7);
         const att=DB.attendance.filter(a=>a.studentId===s2.id);
+        const attThisMonth=att.filter(a=>a.date&&a.date.slice(0,7)===currentMonth);
         const pr=att.filter(a=>a.status==='present').length;
         const ab=att.filter(a=>a.status==='absent').length;
+        const prMonth=attThisMonth.filter(a=>a.status==='present').length;
+        const abMonth=attThisMonth.filter(a=>a.status==='absent').length;
+        // أيام الغياب هذا الشهر بالتاريخ
+        const abDates=attThisMonth.filter(a=>a.status==='absent').map(a=>fmtDate(a.date)).join('، ');
         const exms=DB.exams.filter(e=>e.grades?.find(g=>g.studentId===s2.id));
         const avg=exms.length?Math.round(exms.reduce((a,e)=>{const g=e.grades.find(x=>x.studentId===s2.id);return a+(g?((g.score/e.total)*100):0);},0)/exms.length):0;
         const paid=DB.payments.filter(p=>p.studentId===s2.id&&p.status==='paid').length;
-        reportTxt=`\n📊 *ملخص أداء الطالب:*\n✅ أيام الحضور: ${pr} يوم\n❌ أيام الغياب: ${ab} يوم\n📝 متوسط الدرجات: ${avg}%\n💰 شهور مسددة: ${paid}`;
+        const monthPaid=DB.payments.find(p=>p.studentId===s2.id&&p.month===currentMonth&&p.status==='paid');
+        // آخر امتحان
+        const lastExam=exms.sort((a,b)=>b.date.localeCompare(a.date))[0];
+        const lastGrade=lastExam?lastExam.grades?.find(g=>g.studentId===s2.id):null;
+        reportTxt=`\n\n📊 *ملخص أداء الطالب:*`
+          +`\n━━━━━━━━━━━━━━━━`
+          +`\n📅 *حضور وغياب هذا الشهر:*`
+          +`\n   ✅ حضر: ${prMonth} يوم`
+          +`\n   ❌ غاب: ${abMonth} يوم`
+          +(abDates?`\n   📌 أيام الغياب: ${abDates}`:'')
+          +`\n━━━━━━━━━━━━━━━━`
+          +`\n📈 *إجمالي الفصل الدراسي:*`
+          +`\n   ✅ إجمالي الحضور: ${pr} يوم`
+          +`\n   ❌ إجمالي الغياب: ${ab} يوم`
+          +`\n   📝 متوسط الدرجات: ${avg}%`
+          +(lastExam&&lastGrade?`\n   🎯 آخر امتحان (${lastExam.name}): ${lastGrade.score}/${lastExam.total}`:'')
+          +`\n   💰 الاشتراك: ${monthPaid?'✅ مسدد':'❌ لم يُسدَّد بعد'}`
+          +`\n   📦 إجمالي الشهور المسددة: ${paid} شهر`;
       }
-      msg=`📊 *تقرير أداء الطالب - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*${reportTxt}\n\nنتمنى للطالب التوفيق 🌟\n\n— ${teacher}`;
+      msg=`📊 *تقرير أداء الطالب - ${center}*\n\nعزيزي ولي أمر الطالب: *${studentName}*${reportTxt}\n\n━━━━━━━━━━━━━━━━\nللاستفسار تواصل مع ${teacher} 🌟`;
       break;
     }
     default:
