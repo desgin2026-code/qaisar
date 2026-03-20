@@ -6984,7 +6984,7 @@ function installPWA(){ tryInstallDirect(); }
 // Offline: البيانات محفوظة في localStorage دايماً بدون حاجة لـ SW
 
 // تسجيل Service Worker للعمل بدون نت
-if('serviceWorker' in navigator){
+if('serviceWorker' in navigator && location.hostname.includes('github.io')){
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('/qaisar/sw.js')
       .then(reg=>{ console.log('SW registered'); })
