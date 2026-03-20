@@ -40,7 +40,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
 .stars{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
 .star{position:absolute;background:#c9a227;border-radius:50%;animation:twinkle 3s ease-in-out infinite;}
 @keyframes twinkle{0%,100%{opacity:.2;transform:scale(1);}50%{opacity:1;transform:scale(1.5);}}
-.splash-logo{font-size:3.5rem;font-weight:900;background:linear-gradient(135deg,#c9a227,#f0c040,#c9a227);background-size:200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 2.5s linear infinite,slideDown .8s ease-out;}
+.splash-logo{font-size:1.6rem;font-weight:900;background:linear-gradient(135deg,#c9a227,#f0c040,#c9a227);background-size:200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 2.5s linear infinite,slideDown .8s ease-out;}
 @keyframes shimmer{0%{background-position:0%}100%{background-position:200%}}
 @keyframes slideDown{from{opacity:0;transform:translateY(-40px)}to{opacity:1;transform:translateY(0)}}
 @keyframes dotPulse{0%,80%,100%{transform:scale(0);opacity:.3}40%{transform:scale(1);opacity:1}}
@@ -559,7 +559,12 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
         <select class="form-select" style="width:auto;min-width:180px;" id="attendGroupSel" onchange="loadAttendGroup()">
           <option value="">-- اختر مجموعة --</option>
         </select>
-        <input type="date" id="attendDate" class="select-date" onchange="loadAttendGroup()">
+        <div style="display:flex;align-items:center;gap:4px;">
+          <button class="btn btn-secondary" onclick="changeAttendDate(-1)" title="اليوم السابق">◀</button>
+          <input type="date" id="attendDate" class="select-date" onchange="loadAttendGroup()">
+          <button class="btn btn-secondary" onclick="changeAttendDate(1)" title="اليوم التالي">▶</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('attendDate').value=today();loadAttendGroup();" style="font-size:.75rem;padding:6px 8px;">اليوم</button>
+        </div>
         <div class="search-bar"><span>🔍</span><input type="text" id="attendSearch" placeholder="بحث سريع باسم طالب..." oninput="filterAttendStudents(this.value)" style="min-width:160px;"></div>
         <button class="btn btn-secondary" onclick="refreshAll()">🔄 تحديث</button>
         <button class="btn btn-secondary" onclick="exportPDF('attendance')">📄 PDF</button>
@@ -1207,7 +1212,8 @@ function doLogin(){
   document.getElementById('welcomeMsg').style.display='block';
   const wEl=document.getElementById('welcomeMsg').querySelector('.splash-logo');
   wEl.textContent='👑 أهلاً بك '+user.name;
-  wEl.style.fontSize='2.2rem';
+  wEl.style.fontSize='1.4rem';
+  // مش بنغير الـ font-size عشان يكون مقروء على كل الشاشات
   setTimeout(()=>{
     document.getElementById('splash').style.opacity='0';
     document.getElementById('splash').style.transition='opacity .5s';
@@ -1217,7 +1223,7 @@ function doLogin(){
       document.getElementById('app').style.flexDirection='column';
       initApp();
     },500);
-  },2000);
+  },2200);
   logActivity('تسجيل دخول','');
 }
 
@@ -1434,13 +1440,13 @@ function renderTab(name){
     case 'attendance': renderAttendance(); break;
     case 'exams': renderExams(); break;
     case 'performance': renderPerformance(); break;
-    case 'payments': renderPayments(); break;
+    case 'payments': renderPayments(); setTimeout(checkSentMarks,300); break;
     case 'profits': renderProfits(); break;
     case 'reports': renderReports(); break;
     case 'notes': renderNotes(); break;
     case 'myfiles': renderFiles(); break;
     case 'schedule': renderSchedule(); break;
-    case 'bulkMsg': renderBulkMsg(); break;
+    case 'bulkMsg': renderBulkMsg(); setTimeout(checkSentMarks,300); break;
     case 'commLog': renderCommLog(); break;
     case 'notifications': renderNotifications(); break;
     case 'qrattend': renderQR(); break;
@@ -1886,6 +1892,14 @@ function deleteGroup(id){
 // ============================================================
 // =================== ATTENDANCE =============================
 // ============================================================
+function changeAttendDate(days){
+  const el=document.getElementById('attendDate'); if(!el)return;
+  const d=new Date(el.value||today());
+  d.setDate(d.getDate()+days);
+  el.value=d.toISOString().split('T')[0];
+  loadAttendGroup();
+}
+
 function renderAttendance(){
   const gid=document.getElementById('attendGroupSel')?.value;
   if(!gid){ document.getElementById('attendContent').innerHTML=`<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-txt">اختر مجموعة لتسجيل الحضور</div></div>`; return; }
@@ -2328,23 +2342,23 @@ function renderPayments(){
         <div style="font-size:.85rem;font-weight:700;color:var(--success);margin-bottom:10px;">✅ دفعوا هذا الشهر (${paidStudents.length})</div>
         <div style="max-height:160px;overflow-y:auto;">
           ${paidStudents.length===0?'<div style="color:var(--txt3);font-size:.8rem">لا أحد دفع بعد</div>':
-          paidStudents.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(26,48,80,.3);font-size:.82rem;">
+          paidStudents.map(s=>{const wp=s.phone?(s.phone.replace(/\D/g,'').replace(/^0/,'2')):null;return`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(26,48,80,.3);font-size:.82rem;">
             <span>${s.name}</span>
-            <button class="btn btn-xs btn-secondary" onclick="sendWAChoice('${s.id}','payment','${monthF}')">📲</button>
-          </div>`).join('')}
+            ${wp?`<button class="btn btn-xs btn-secondary" id="sendbtn-payment-${wp}" onclick="sendWAChoice('${s.id}','payment','${monthF}');markSent('${wp}','payment')">📲</button>`:''}
+          </div>`}).join('')}
         </div>
       </div>
       <div style="background:var(--bg2);border:1px solid rgba(192,57,43,.25);border-radius:12px;padding:14px;">
         <div style="font-size:.85rem;font-weight:700;color:var(--danger);margin-bottom:10px;">❌ لم يدفعوا بعد (${lateStudents.length})</div>
         <div style="max-height:140px;overflow-y:auto;">
           ${lateStudents.length===0?'<div style="color:var(--txt3);font-size:.8rem">الكل دفع! 🎉</div>':
-          lateStudents.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(26,48,80,.3);font-size:.82rem;">
+          lateStudents.map(s=>{const wp=s.phone?(s.phone.replace(/\D/g,'').replace(/^0/,'2')):null;return`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(26,48,80,.3);font-size:.82rem;">
             <span>${s.name}</span>
             <div style="display:flex;gap:4px;">
               <button class="btn btn-xs btn-success" onclick="quickPayStudent('${s.id}','${monthF}')">💰 سدّد</button>
-              <button class="btn btn-xs btn-secondary" onclick="sendWAChoice('${s.id}','payment_late','')">📲</button>
+              ${wp?`<button class="btn btn-xs btn-secondary" id="sendbtn-payment_late-${wp}" onclick="sendWAChoice('${s.id}','payment_late','');markSent('${wp}','payment_late')">📲</button>`:''}
             </div>
-          </div>`).join('')}
+          </div>`}).join('')}
         </div>
         ${lateStudents.length>0?`<button class="btn btn-sm btn-danger" style="width:100%;margin-top:10px;" onclick="sendLateReminders('${monthF}')">📲 إرسال تذكير للكل</button>`:''}
       </div>
@@ -3699,21 +3713,23 @@ function sendBulkMsg(){
   document.getElementById('modalOverlay').classList.add('show');
   addNotification('رسائل جماعية',`جاهز لإرسال ${students.length} رسالة`,'info');
   saveDB();
+  setTimeout(checkSentMarks, 400);
 }
 
 function sendAllSequential(students, text){
-  // للكمبيوتر فقط - بيفتح النوافذ تلقائي
   let count=0;
   const sendNext=(index)=>{
-    if(index>=students.length){ showToast(`✅ تم فتح ${count} رسالة`,'success'); return; }
+    if(index>=students.length){ showToast(`✅ تم فتح ${count} رسالة وحُفظ تأكيد الإرسال`,'success'); return; }
     const s=students[index];
     const personalMsg=text.replace('{اسم الطالب}',s.name).replace('{الاسم}',s.name);
     const cleanPhone=s.phone.replace(/\D/g,'').replace(/^0/,'');
     let waPhone;
-      if(cleanPhone.startsWith('20')) waPhone=cleanPhone;
-      else if(cleanPhone.startsWith('0')) waPhone='2'+cleanPhone;
-      else waPhone='20'+cleanPhone;
+    if(cleanPhone.startsWith('20')) waPhone=cleanPhone;
+    else if(cleanPhone.startsWith('0')) waPhone='2'+cleanPhone;
+    else waPhone='20'+cleanPhone;
     window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(personalMsg)}`,'_blank');
+    logCommMessage(s.id, s.phone, 'bulk', personalMsg);
+    markSent(waPhone, 'bulk');
     count++;
     setTimeout(()=>sendNext(index+1), 1000);
   };
@@ -4870,13 +4886,13 @@ function checkSentMarks(){
 }
 
 function clearSentMarks(){
-  // مسح علامات الإرسال القديمة من DB (أكتر من يوم)
+  // مسح علامات الإرسال القديمة من DB (أكتر من 30 يوم)
   if(!DB.sentMessages) return;
   const now=Date.now();
   let changed=false;
   Object.keys(DB.sentMessages).forEach(key=>{
     const time=new Date(DB.sentMessages[key].sentAt).getTime();
-    if(now-time > 86400000){ delete DB.sentMessages[key]; changed=true; }
+    if(now-time > 30*86400000){ delete DB.sentMessages[key]; changed=true; }
   });
   if(changed) saveDB();
 }
