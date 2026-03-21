@@ -425,6 +425,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
       <div class="inner-tab" onclick="switchParentTab('grades',this)">📝 الدرجات</div>
       <div class="inner-tab" onclick="switchParentTab('payments',this)">💰 المدفوعات</div>
       <div class="inner-tab" onclick="switchParentTab('schedule',this)">📅 الجدول</div>
+      <div class="inner-tab" onclick="switchParentTab('videos',this)">🎬 الفيديوهات</div>
       <div class="inner-tab" onclick="switchParentTab('notifications',this)" id="parentNotifTab">🔔 الإشعارات</div>
       <div class="inner-tab" onclick="switchParentTab('settings',this)">⚙️ إعداداتي</div>
     </div>
@@ -483,6 +484,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
     <div class="nav-item" onclick="showTab('notifications')" data-tab="notifications"><span class="nav-icon">🔔</span> الإشعارات <span class="nav-badge" id="notifBadge">0</span></div>
     <div class="nav-item" onclick="showTab('tasks')" data-tab="tasks"><span class="nav-icon">✍️</span> المهام <span class="nav-badge" id="tasksBadge" style="display:none;">0</span></div>
     <div class="nav-item" onclick="showTab('qrattend')" data-tab="qrattend" data-perm="attendance"><span class="nav-icon">📱</span> QR الحضور</div>
+    <div class="nav-item" onclick="showTab('videos')" data-tab="videos"><span class="nav-icon">🎬</span> الفيديوهات التعليمية</div>
     <div class="sidebar-section">النظام</div>
     <div class="nav-item" onclick="showTab('archive')" data-tab="archive" data-perm="archive"><span class="nav-icon">🗄️</span> الأرشيف</div>
     <div class="nav-item admin-only" onclick="showTab('users')" data-tab="users"><span class="nav-icon">👤</span> إدارة المستخدمين</div>
@@ -805,6 +807,26 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
         <button class="btn btn-primary" onclick="renderCalendar()">🔄 تحديث</button>
       </div>
       <div id="calendarContent"></div>
+    </div>
+
+    <!-- ========== VIDEOS ========== -->
+    <div id="tab-videos" class="tab-pane">
+      <div class="toolbar">
+        <div class="toolbar-title">🎬 الفيديوهات التعليمية</div>
+        <div class="search-bar"><span>🔍</span><input type="text" id="videoSearch" placeholder="ابحث باسم الفيديو..." oninput="searchVideos(this.value)"></div>
+        <select class="form-select" style="width:auto;min-width:150px;" id="videoGradeFilter" onchange="filterVideos()">
+          <option value="">كل الصفوف</option>
+          <option>الأول الإعدادي</option>
+          <option>الثاني الإعدادي</option>
+          <option>الثالث الإعدادي</option>
+          <option>الأول الثانوي</option>
+          <option>الثاني الثانوي</option>
+          <option>الثالث الثانوي</option>
+        </select>
+        <button class="btn btn-secondary" onclick="renderVideos()">🔄 تحديث</button>
+        <button class="btn btn-primary" onclick="openAddVideo()">➕ فيديو جديد</button>
+      </div>
+      <div id="videosContent"></div>
     </div>
 
     <!-- ========== SETTINGS ========== -->
@@ -1150,7 +1172,7 @@ function initDB(){
     notifications:[],files:[],schedule:[],
     employees:[],empAttendance:[],empLeaves:[],
     accounting:[],cashbox:{balance:0,transactions:[]},
-    tasks:[],parentAccounts:[],sentMessages:{},parentNotifications:[],
+    tasks:[],parentAccounts:[],sentMessages:{},parentNotifications:[],videos:[],
     settings:{
       centerName:'سنتر القيصر',teacherName:'القيصر أحمد حسن',
       grades:['الأول الإعدادي','الثاني الإعدادي','الثالث الإعدادي',
@@ -1450,6 +1472,7 @@ function renderTab(name){
     case 'commLog': renderCommLog(); break;
     case 'notifications': renderNotifications(); break;
     case 'qrattend': renderQR(); break;
+    case 'videos': renderVideos(); break;
     case 'archive': renderArchive(); break;
     case 'users': renderUsers(); break;
     case 'settings': renderSettings(); break;
@@ -3938,6 +3961,230 @@ function filterQR(q){
     });
   },50);
 }
+// ============================================================
+// =================== VIDEOS =================================
+// ============================================================
+function renderVideos(searchQ, gradeF){
+  if(!DB.videos) DB.videos=[];
+  const q=searchQ||document.getElementById('videoSearch')?.value||'';
+  const grade=gradeF!==undefined?gradeF:(document.getElementById('videoGradeFilter')?.value||'');
+  let videos=[...DB.videos].sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  if(grade) videos=videos.filter(v=>v.grade===grade);
+  if(q) videos=videos.filter(v=>v.title.includes(q)||v.desc?.includes(q));
+  const div=document.getElementById('videosContent'); if(!div)return;
+  if(!videos.length){
+    div.innerHTML=`<div class="empty-state"><div class="empty-icon">🎬</div><div class="empty-txt">لا توجد فيديوهات${q||grade?' بهذا الفلتر':' — اضغط ➕ لإضافة فيديو جديد'}</div></div>`;
+    return;
+  }
+  div.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+      ${videos.map(v=>{
+        const ytId=extractYouTubeId(v.url);
+        const thumb=ytId?`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`:'';
+        return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:.2s;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.3)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+          ${thumb?`<div style="position:relative;cursor:pointer;" onclick="watchVideo('${v.url}')">
+            <img src="${thumb}" style="width:100%;height:160px;object-fit:cover;" onerror="this.style.display='none'">
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);">
+              <div style="width:52px;height:52px;background:rgba(255,0,0,.85);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">▶</div>
+            </div>
+          </div>`:`<div style="height:80px;background:linear-gradient(135deg,var(--bg3),var(--bg2));display:flex;align-items:center;justify-content:center;font-size:2rem;cursor:pointer;" onclick="watchVideo('${v.url}')">🎬</div>`}
+          <div style="padding:14px;">
+            <div style="font-weight:700;font-size:.95rem;margin-bottom:5px;color:var(--txt);">${v.title}</div>
+            <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+              <span class="badge badge-blue" style="font-size:.72rem;">${v.grade||'عام'}</span>
+              ${v.groupName?`<span class="badge badge-purple" style="font-size:.72rem;">📚 ${v.groupName}</span>`:''}
+              <span style="font-size:.72rem;color:var(--txt3);margin-right:auto;">${fmtDate(v.createdAt?.slice(0,10))}</span>
+            </div>
+            ${v.desc?`<div style="font-size:.8rem;color:var(--txt2);margin-bottom:10px;line-height:1.5;">${v.desc.slice(0,80)}${v.desc.length>80?'...':''}</div>`:''}
+            <div style="display:flex;gap:7px;">
+              <button class="btn btn-success" style="flex:1;font-size:.8rem;" onclick="watchVideo('${v.url}')">▶ مشاهدة</button>
+              <button class="btn btn-secondary" style="font-size:.8rem;" onclick="editVideo('${v.id}')">✏️</button>
+              <button class="btn btn-danger" style="font-size:.8rem;" onclick="deleteVideo('${v.id}')">🗑️</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function filterVideos(){ renderVideos(); }
+function searchVideos(q){ renderVideos(q); }
+
+function extractYouTubeId(url){
+  if(!url) return null;
+  const m=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+  return m?m[1]:null;
+}
+
+function watchVideo(url){
+  if(!url){ showToast('لا يوجد رابط للفيديو','error'); return; }
+  window.open(url,'_blank');
+}
+
+function openAddVideo(){
+  const groups=DB.groups.map(g=>`<option value="${g.id}" data-name="${g.name}">${g.name}</option>`).join('');
+  const grades=(DB.settings.grades||[]).map(g=>`<option value="${g}">${g}</option>`).join('');
+  document.getElementById('modalTitle').textContent='🎬 إضافة فيديو جديد';
+  document.getElementById('modalBox').classList.add('modal-lg');
+  document.getElementById('modalBody').innerHTML=`
+    <div class="form-row">
+      <div class="form-group full">
+        <label class="form-label">عنوان الفيديو *</label>
+        <input class="form-input" id="vTitle" placeholder="مثال: شرح درس النيل في مصر">
+      </div>
+      <div class="form-group full">
+        <label class="form-label">رابط الفيديو (YouTube) *</label>
+        <input class="form-input" id="vUrl" dir="ltr" placeholder="https://www.youtube.com/watch?v=..." oninput="previewVideoThumb()">
+        <div id="vThumbPreview" style="margin-top:8px;"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">الصف الدراسي *</label>
+        <select class="form-select" id="vGrade">
+          <option value="">-- اختر الصف --</option>
+          ${grades}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">المجموعة (اختياري)</label>
+        <select class="form-select" id="vGroup">
+          <option value="">كل المجموعات</option>
+          ${groups}
+        </select>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">وصف الفيديو (اختياري)</label>
+        <textarea class="form-textarea" id="vDesc" placeholder="وصف مختصر للفيديو..." style="min-height:80px;"></textarea>
+      </div>
+    </div>`;
+  document.getElementById('modalFooter').innerHTML=`
+    <button class="btn btn-primary" onclick="saveVideo()">💾 حفظ الفيديو</button>
+    <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function previewVideoThumb(){
+  const url=document.getElementById('vUrl')?.value;
+  const box=document.getElementById('vThumbPreview'); if(!box)return;
+  const ytId=extractYouTubeId(url);
+  if(ytId){
+    box.innerHTML=`<img src="https://img.youtube.com/vi/${ytId}/mqdefault.jpg" style="width:180px;height:auto;border-radius:8px;border:2px solid var(--gold);" onerror="this.style.display='none'">
+    <div style="font-size:.75rem;color:var(--success);margin-top:4px;">✅ رابط YouTube صحيح</div>`;
+  } else if(url){
+    box.innerHTML=`<div style="font-size:.75rem;color:var(--warn);">⚠️ تأكد من صحة الرابط</div>`;
+  } else {
+    box.innerHTML='';
+  }
+}
+
+function saveVideo(editId=null){
+  const title=document.getElementById('vTitle')?.value.trim();
+  const url=document.getElementById('vUrl')?.value.trim();
+  const grade=document.getElementById('vGrade')?.value;
+  const groupEl=document.getElementById('vGroup');
+  const groupId=groupEl?.value||'';
+  const groupName=groupId?(DB.groups.find(g=>g.id===groupId)?.name||''):'';
+  const desc=document.getElementById('vDesc')?.value.trim();
+  if(!title||!url){ showToast('أدخل العنوان والرابط','error'); return; }
+  if(!grade){ showToast('اختر الصف الدراسي','error'); return; }
+  if(!DB.videos) DB.videos=[];
+  if(editId){
+    const v=DB.videos.find(x=>x.id===editId); if(!v)return;
+    v.title=title; v.url=url; v.grade=grade;
+    v.groupId=groupId; v.groupName=groupName; v.desc=desc;
+    v.updatedAt=new Date().toISOString();
+  } else {
+    DB.videos.unshift({id:uid(),title,url,grade,groupId,groupName,desc,
+      createdAt:new Date().toISOString(),createdBy:currentUser?.name||'admin'});
+  }
+  saveDB(); closeModal(); renderVideos();
+  showToast(editId?'✅ تم تعديل الفيديو':'✅ تم إضافة الفيديو بنجاح','success');
+  logActivity(editId?'تعديل فيديو':'إضافة فيديو',title);
+}
+
+function editVideo(id){
+  const v=DB.videos.find(x=>x.id===id); if(!v)return;
+  const groups=DB.groups.map(g=>`<option value="${g.id}" ${g.id===v.groupId?'selected':''}>${g.name}</option>`).join('');
+  const grades=(DB.settings.grades||[]).map(g=>`<option value="${g}" ${g===v.grade?'selected':''}>${g}</option>`).join('');
+  const ytId=extractYouTubeId(v.url);
+  document.getElementById('modalTitle').textContent='✏️ تعديل الفيديو';
+  document.getElementById('modalBox').classList.add('modal-lg');
+  document.getElementById('modalBody').innerHTML=`
+    <div class="form-row">
+      <div class="form-group full">
+        <label class="form-label">عنوان الفيديو *</label>
+        <input class="form-input" id="vTitle" value="${v.title}">
+      </div>
+      <div class="form-group full">
+        <label class="form-label">رابط الفيديو *</label>
+        <input class="form-input" id="vUrl" dir="ltr" value="${v.url}" oninput="previewVideoThumb()">
+        <div id="vThumbPreview" style="margin-top:8px;">
+          ${ytId?`<img src="https://img.youtube.com/vi/${ytId}/mqdefault.jpg" style="width:180px;border-radius:8px;border:2px solid var(--gold);" onerror="this.style.display='none'"><div style="font-size:.75rem;color:var(--success);margin-top:4px;">✅ رابط YouTube صحيح</div>`:''}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">الصف الدراسي *</label>
+        <select class="form-select" id="vGrade"><option value="">-- اختر --</option>${grades}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">المجموعة</label>
+        <select class="form-select" id="vGroup"><option value="">كل المجموعات</option>${groups}</select>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">وصف الفيديو</label>
+        <textarea class="form-textarea" id="vDesc" style="min-height:80px;">${v.desc||''}</textarea>
+      </div>
+    </div>`;
+  document.getElementById('modalFooter').innerHTML=`
+    <button class="btn btn-primary" onclick="saveVideo('${id}')">💾 حفظ التعديلات</button>
+    <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function deleteVideo(id){
+  const v=DB.videos.find(x=>x.id===id); if(!v)return;
+  if(!confirm(`حذف فيديو "${v.title}"؟`))return;
+  DB.videos=DB.videos.filter(x=>x.id!==id);
+  saveDB(); renderVideos(); showToast('تم حذف الفيديو','success');
+}
+
+// بوابة ولي الأمر — الفيديوهات
+function renderParentVideos(student){
+  const div=document.getElementById('parentContent'); if(!div)return;
+  if(!DB.videos||!DB.videos.length){
+    div.innerHTML=`<div class="empty-state"><div class="empty-icon">🎬</div><div class="empty-txt">لا توجد فيديوهات بعد</div></div>`;
+    return;
+  }
+  let videos=DB.videos.filter(v=>!v.grade||v.grade===student.grade||(v.groupId&&v.groupId===student.groupId));
+  videos=videos.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  if(!videos.length){
+    div.innerHTML=`<div class="empty-state"><div class="empty-icon">🎬</div><div class="empty-txt">لا توجد فيديوهات لصفك بعد</div></div>`;
+    return;
+  }
+  div.innerHTML=`
+    <div style="font-size:.83rem;color:var(--txt3);margin-bottom:14px;">📚 ${videos.length} فيديو لصف ${student.grade||'عام'}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
+      ${videos.map(v=>{
+        const ytId=extractYouTubeId(v.url);
+        const thumb=ytId?`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`:'';
+        return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+          ${thumb?`<div style="position:relative;cursor:pointer;" onclick="watchVideo('${v.url}')">
+            <img src="${thumb}" style="width:100%;height:150px;object-fit:cover;" onerror="this.parentElement.style.display='none'">
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.25);">
+              <div style="width:48px;height:48px;background:rgba(255,0,0,.9);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;">▶</div>
+            </div>
+          </div>`:
+          `<div style="height:70px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:2rem;cursor:pointer;" onclick="watchVideo('${v.url}')">🎬</div>`}
+          <div style="padding:12px;">
+            <div style="font-weight:700;font-size:.9rem;margin-bottom:5px;">${v.title}</div>
+            ${v.desc?`<div style="font-size:.78rem;color:var(--txt2);margin-bottom:8px;">${v.desc.slice(0,80)}${v.desc.length>80?'...':''}</div>`:''}
+            <div style="font-size:.72rem;color:var(--txt3);margin-bottom:8px;">${fmtDate(v.createdAt?.slice(0,10))}</div>
+            <button class="btn btn-success" style="width:100%;font-size:.85rem;" onclick="watchVideo('${v.url}')">▶ مشاهدة الفيديو</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
 function renderArchive(){
   const div=document.getElementById('archiveContent');
   const years=Object.keys(DB.archive||{}).sort((a,b)=>b.localeCompare(a));
@@ -6561,6 +6808,7 @@ function switchParentTab(tab,btn){
   else if(tab==='grades') renderParentGrades(student);
   else if(tab==='payments') renderParentPayments(student);
   else if(tab==='schedule') renderParentSchedule(student);
+  else if(tab==='videos') renderParentVideos(student);
   else if(tab==='notifications') renderParentNotifications(student);
   else if(tab==='settings') renderParentSettings(student);
 }
