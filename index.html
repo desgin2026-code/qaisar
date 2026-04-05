@@ -7044,8 +7044,8 @@ function renderParentOverview(student){
   const notes=(DB.notes||[]).filter(n=>n.studentId===student.id).slice(-3);
 
   // بانر تفعيل الإشعارات
-  const notifGranted = (typeof Notification !== 'undefined' && Notification.permission === 'granted');
-  const notifBanner = (!notifGranted) ? `
+  const notifActivated = localStorage.getItem('notifActivated') === 'true';
+  const notifBanner = (!notifActivated) ? `
     <div id="notifBanner" style="background:linear-gradient(135deg,rgba(201,162,39,.15),rgba(201,162,39,.05));border:2px solid rgba(201,162,39,.5);border-radius:14px;padding:16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <span style="font-size:1.8rem;">🔔</span>
       <div style="flex:1;min-width:180px;">
@@ -7502,21 +7502,22 @@ function renderParentNotifications(student){
 // ========= Notification Permission Popup ====================
 // ============================================================
 function dismissNotifBanner(){
-  localStorage.setItem('notifBannerDismissed','true');
+  localStorage.setItem('notifActivated','true');
   const b = document.getElementById('notifBanner');
   if(b) b.style.display='none';
 }
 
 async function activateNotifFromBanner(){
   const student = window._parentStudent;
-  dismissNotifBanner();
+  localStorage.setItem('notifActivated','true');
+  const b = document.getElementById('notifBanner');
+  if(b) b.style.display='none';
 
   // طلب الإذن مباشرة
   if(typeof Notification !== 'undefined'){
     try {
       const perm = await Notification.requestPermission();
       if(perm === 'granted'){
-        localStorage.setItem('onesignal-notification-prompt','true');
         if(student) tagParentInOneSignal(student);
         showToast('✅ تم تفعيل الإشعارات — هتوصلك أخبار ابنك فوراً 🔔','success');
         return;
@@ -7538,7 +7539,6 @@ async function activateNotifFromBanner(){
     setTimeout(async ()=>{
       const granted = (typeof Notification !== 'undefined' && Notification.permission === 'granted');
       if(granted){
-        localStorage.setItem('onesignal-notification-prompt','true');
         if(student) tagParentInOneSignal(student);
         showToast('✅ تم تفعيل الإشعارات 🔔','success');
       }
