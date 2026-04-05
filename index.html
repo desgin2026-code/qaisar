@@ -502,6 +502,25 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
     </div>
     <div id="parentContent"></div>
   </div>
+
+  <!-- ===== Notification Permission Popup ===== -->
+  <div id="notifPopup" style="position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.75);display:none;align-items:flex-end;justify-content:center;">
+    <div class="notif-sheet">
+      <div class="notif-sheet-icon">🔔</div>
+      <div class="notif-sheet-title">فعّل إشعارات ابنك الآن</div>
+      <div class="notif-sheet-desc">
+        خليك على علم بكل حاجة تخص ابنك<br>فور ما تحصل — حتى لو البوابة مش مفتوحة
+      </div>
+      <div class="notif-sheet-features">
+        <div class="notif-feature"><span class="notif-feature-icon">✅</span> لما يحضر أو يغيب في السنتر</div>
+        <div class="notif-feature"><span class="notif-feature-icon">💰</span> لما يتسجل دفع الاشتراك</div>
+        <div class="notif-feature"><span class="notif-feature-icon">🎬</span> لما ينزل فيديو تعليمي جديد</div>
+        <div class="notif-feature"><span class="notif-feature-icon">📝</span> نتائج الامتحانات والدرجات</div>
+      </div>
+      <button class="notif-btn-allow" onclick="allowNotifFromPopup()">🔔 السماح بالإشعارات</button>
+      <button class="notif-btn-later" onclick="closeNotifPopup(true)">لاحقاً</button>
+    </div>
+  </div>
 </div>
 <div id="app">
   <!-- Header -->
@@ -6881,7 +6900,7 @@ function openParentPortal(student){
   renderParentOverview(student);
 
   // إظهار popup تفعيل الإشعارات (لو لسه ما اتفعلوش)
-  setTimeout(()=> showNotifPopup(), 1500);
+  setTimeout(()=> showNotifPopup(), 2500);
 }
 
 function doParentLogout(){
@@ -7465,54 +7484,61 @@ function renderParentNotifications(student){
 // ========= Notification Permission Popup ====================
 // ============================================================
 function showNotifPopup(){
-  // لو الإشعارات مفعّلة أو محجوبة — ماتوضيش البوب أب
-  if(!('Notification' in window)) return;
-  if(Notification.permission === 'granted' || Notification.permission === 'denied') return;
-  // لو ولي الأمر سبق وغلّق البوب أب في نفس الجلسة — ماتعرضيش
-  if(sessionStorage.getItem('notifPopupShown')) return;
+  // لو الإشعارات مفعّلة أو محجوبة — ماتوضيش
+  if(typeof Notification !== 'undefined' && (Notification.permission === 'granted' || Notification.permission === 'denied')) return;
+  // لو مش بيدعم الإشعارات خالص
+  if(typeof Notification === 'undefined') return;
+  // لو ولي الأمر ضغط "لاحقاً" النهارده بس — ماتعرضيش
+  const todayStr = new Date().toDateString();
+  if(localStorage.getItem('notifPopupDismissed') === todayStr) return;
   const popup = document.getElementById('notifPopup');
-  if(popup) popup.classList.add('show');
+  if(popup){
+    popup.style.display = 'flex';
+  }
 }
 
 function closeNotifPopup(rememberChoice){
   const popup = document.getElementById('notifPopup');
-  if(popup) popup.classList.remove('show');
-  if(rememberChoice) sessionStorage.setItem('notifPopupShown','1');
+  if(popup){
+    popup.style.display = 'none';
+  }
+  if(rememberChoice){
+    const todayStr = new Date().toDateString();
+    localStorage.setItem('notifPopupDismissed', todayStr);
+  }
 }
 
 async function allowNotifFromPopup(){
   closeNotifPopup(true);
   const student = window._parentStudent;
-  try {
-    // طلب الإذن عبر OneSignal
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async function(OneSignal){
-      try {
-        await OneSignal.registerForPushNotifications();
-        const perm = Notification.permission;
-        if(perm === 'granted'){
-          if(student) tagParentInOneSignal(student);
-          showToast('✅ تم تفعيل الإشعارات — هتوصلك أخبار ابنك فوراً 🔔','success');
-        } else {
-          showToast('لم يتم السماح بالإشعارات — يمكنك التفعيل من الإعدادات','warning');
-        }
-      } catch(e){
-        // Fallback
-        Notification.requestPermission().then(perm=>{
-          if(perm==='granted'){
-            if(student) tagParentInOneSignal(student);
-            showToast('✅ تم تفعيل الإشعارات','success');
-          }
-        });
-      }
-    });
-  } catch(e){
-    Notification.requestPermission().then(perm=>{
-      if(perm==='granted'){
+
+  // على iOS/أندرويد: OneSignal slidedown هيطلع لوحده لما نطلب التسجيل
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(async function(OneSignal){
+    try {
+      // هذا هو الاستدعاء الصحيح لإظهار طلب الإذن
+      await OneSignal.showSlidedownPrompt({ force: true });
+    } catch(e1){
+      try { await OneSignal.registerForPushNotifications(); } catch(e2){}
+    }
+    // بعد ثانيتين نشوف النتيجة
+    setTimeout(()=>{
+      if(typeof Notification !== 'undefined' && Notification.permission === 'granted'){
         if(student) tagParentInOneSignal(student);
-        showToast('✅ تم تفعيل الإشعارات','success');
+        showToast('✅ تم تفعيل الإشعارات — هتوصلك أخبار ابنك فوراً 🔔','success');
       }
-    });
+    }, 2000);
+  });
+
+  // Fallback مباشر لو OneSignal مش شغال
+  if(typeof Notification !== 'undefined' && Notification.permission === 'default'){
+    try {
+      const perm = await Notification.requestPermission();
+      if(perm === 'granted'){
+        if(student) tagParentInOneSignal(student);
+        showToast('✅ تم تفعيل الإشعارات 🔔','success');
+      }
+    } catch(e){}
   }
 }
 
@@ -7575,25 +7601,6 @@ if('serviceWorker' in navigator && location.hostname.includes('github.io')){
   });
 }
 </script>
-
-<!-- ===== Notification Permission Popup ===== -->
-<div id="notifPopup">
-  <div class="notif-sheet">
-    <div class="notif-sheet-icon">🔔</div>
-    <div class="notif-sheet-title">فعّل إشعارات ابنك الآن</div>
-    <div class="notif-sheet-desc">
-      خليك على علم بكل حاجة تخص ابنك<br>فور ما تحصل — حتى لو البوابة مش مفتوحة
-    </div>
-    <div class="notif-sheet-features">
-      <div class="notif-feature"><span class="notif-feature-icon">✅</span> لما يحضر أو يغيب في السنتر</div>
-      <div class="notif-feature"><span class="notif-feature-icon">💰</span> لما يتسجل دفع الاشتراك</div>
-      <div class="notif-feature"><span class="notif-feature-icon">🎬</span> لما ينزل فيديو تعليمي جديد</div>
-      <div class="notif-feature"><span class="notif-feature-icon">📝</span> نتائج الامتحانات والدرجات</div>
-    </div>
-    <button class="notif-btn-allow" onclick="allowNotifFromPopup()">🔔 السماح بالإشعارات</button>
-    <button class="notif-btn-later" onclick="closeNotifPopup(true)">لاحقاً</button>
-  </div>
-</div>
 
 </body>
 </html>
