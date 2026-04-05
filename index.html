@@ -503,25 +503,27 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
     <div id="parentContent"></div>
   </div>
 
-  <!-- ===== Notification Permission Popup ===== -->
-  <div id="notifPopup" style="position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.75);display:none;align-items:flex-end;justify-content:center;">
-    <div class="notif-sheet">
-      <div class="notif-sheet-icon">🔔</div>
-      <div class="notif-sheet-title">فعّل إشعارات ابنك الآن</div>
-      <div class="notif-sheet-desc">
-        خليك على علم بكل حاجة تخص ابنك<br>فور ما تحصل — حتى لو البوابة مش مفتوحة
-      </div>
-      <div class="notif-sheet-features">
-        <div class="notif-feature"><span class="notif-feature-icon">✅</span> لما يحضر أو يغيب في السنتر</div>
-        <div class="notif-feature"><span class="notif-feature-icon">💰</span> لما يتسجل دفع الاشتراك</div>
-        <div class="notif-feature"><span class="notif-feature-icon">🎬</span> لما ينزل فيديو تعليمي جديد</div>
-        <div class="notif-feature"><span class="notif-feature-icon">📝</span> نتائج الامتحانات والدرجات</div>
-      </div>
-      <button class="notif-btn-allow" onclick="allowNotifFromPopup()">🔔 السماح بالإشعارات</button>
-      <button class="notif-btn-later" onclick="closeNotifPopup(true)">لاحقاً</button>
+</div>
+
+<!-- ===== Notification Permission Popup (خارج parentApp عشان يظهر دايماً) ===== -->
+<div id="notifPopup" style="position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.75);display:none;align-items:flex-end;justify-content:center;">
+  <div class="notif-sheet">
+    <div class="notif-sheet-icon">🔔</div>
+    <div class="notif-sheet-title">فعّل إشعارات ابنك الآن</div>
+    <div class="notif-sheet-desc">
+      خليك على علم بكل حاجة تخص ابنك<br>فور ما تحصل — حتى لو البوابة مش مفتوحة
     </div>
+    <div class="notif-sheet-features">
+      <div class="notif-feature"><span class="notif-feature-icon">✅</span> لما يحضر أو يغيب في السنتر</div>
+      <div class="notif-feature"><span class="notif-feature-icon">💰</span> لما يتسجل دفع الاشتراك</div>
+      <div class="notif-feature"><span class="notif-feature-icon">🎬</span> لما ينزل فيديو تعليمي جديد</div>
+      <div class="notif-feature"><span class="notif-feature-icon">📝</span> نتائج الامتحانات والدرجات</div>
+    </div>
+    <button class="notif-btn-allow" onclick="allowNotifFromPopup()">🔔 السماح بالإشعارات</button>
+    <button class="notif-btn-later" onclick="closeNotifPopup(true)">لاحقاً</button>
   </div>
 </div>
+
 <div id="app">
   <!-- Header -->
   <div class="header">
