@@ -2,6 +2,31 @@
 <html dir="rtl" lang="ar">
 <head>
 <meta charset="UTF-8">
+<!-- OneSignal Push Notifications -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "9f33f90a-b85e-4fb5-8d9a-bf8a246a0979",
+      safari_web_id: "web.onesignal.auto.59c3dafd-0ede-48fd-b632-a1606d17d410",
+      notifyButton: { enable: true },
+      allowLocalhostAsSecureOrigin: true,
+    });
+    // لما ولي الأمر يشترك — نضيفله tag بالصف والطالب
+    OneSignal.on('subscriptionChange', async (isSubscribed) => {
+      if(isSubscribed && window._parentStudent){
+        const s = window._parentStudent;
+        await OneSignal.sendTags({
+          grade: s.grade || 'عام',
+          studentId: s.id,
+          studentName: s.name,
+          groupId: s.groupId || ''
+        });
+      }
+    });
+  });
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>سنتر القيصر - إدارة الدراسات الاجتماعية</title>
 <meta name="theme-color" content="#050d1a">
@@ -1727,12 +1752,17 @@ function deleteStudent(id){
   if(!checkPerm('delete')){ showToast('ليس لديك صلاحية الحذف','error'); return; }
   const s=DB.students.find(x=>x.id===id);
   if(!confirm(`حذف الطالب "${s?.name}"؟ سيتم حذف جميع بياناته.`)) return;
+  // حذف ولي الأمر من OneSignal تلقائياً
+  removeParentFromOneSignal(id);
+  // حذف حساب ولي الأمر من DB
+  DB.parentAccounts=(DB.parentAccounts||[]).filter(p=>p.studentId!==id);
+  DB.parentNotifications=(DB.parentNotifications||[]).filter(n=>n.studentId!==id);
   DB.students=DB.students.filter(x=>x.id!==id);
   DB.attendance=DB.attendance.filter(x=>x.studentId!==id);
   DB.payments=DB.payments.filter(x=>x.studentId!==id);
   DB.notes=DB.notes.filter(x=>x.studentId!==id);
   logActivity('حذف طالب',s?.name);
-  saveDB(); renderStudents(); populateSelects(); showToast('تم الحذف','success');
+  saveDB(); renderStudents(); populateSelects(); showToast('تم الحذف وإزالة ولي الأمر من الإشعارات ✅','success');
 }
 
 function viewStudent(id){
@@ -2033,8 +2063,11 @@ function setAttend(sid,gid,date,status,btn){
     sendWAMsg(s.phone, status==='present'?'present':'absent', s.name, date);
   }
   // إشعار لولي الأمر
-  if(s) addParentNotification(s.id, status==='present'?'attend_present':'attend_absent',
-    `${status==='present'?'✅ حضر':'❌ غاب'} الطالب ${s.name} اليوم ${fmtDate(date)}`);
+  if(s){
+    const msg=`${status==='present'?'✅ حضر':'❌ غاب'} الطالب ${s.name} اليوم ${fmtDate(date)}`;
+    addParentNotification(s.id, status==='present'?'attend_present':'attend_absent', msg);
+    sendPushToParent(`${status==='present'?'✅ حضور':'❌ غياب'} — ${s.name}`, msg, s.id);
+  }
 }
 
 function markAll(gid,date,status){
@@ -2525,8 +2558,11 @@ function savePayment(){
   showToast('تم تسجيل الدفعة وإضافتها للخزنة ✅','success');
   if(s?.phone) sendWAMsg(s.phone,'payment',s.name,month);
   // إشعار لولي الأمر
-  if(s&&(status==='paid'||status==='partial'))
-    addParentNotification(s.id,'payment',`💰 تم تسجيل دفعة ${fmtMoney(amount)} لشهر ${month}`);
+  if(s&&(status==='paid'||status==='partial')){
+    const payMsg=`💰 تم تسجيل دفعة ${fmtMoney(amount)} لشهر ${month}`;
+    addParentNotification(s.id,'payment', payMsg);
+    sendPushToParent(`💰 تم تسجيل الدفع — ${s.name}`, payMsg, s.id);
+  }
   // Show receipt
   setTimeout(()=>showPaymentReceipt(pay,s),300);
 }
@@ -4099,6 +4135,11 @@ function saveVideo(editId=null){
   saveDB(); closeModal(); renderVideos();
   showToast(editId?'✅ تم تعديل الفيديو':'✅ تم إضافة الفيديو بنجاح','success');
   logActivity(editId?'تعديل فيديو':'إضافة فيديو',title);
+  // إشعار لأولياء أمور الصف ده بس عند إضافة فيديو جديد
+  if(!editId){
+    const videoMsg=`🎬 فيديو جديد: "${title}" — ${grade}`;
+    sendPushToParent('🎬 فيديو تعليمي جديد', videoMsg, null, grade, groupId||null);
+  }
 }
 
 function editVideo(id){
@@ -4347,8 +4388,19 @@ function toggleParentPass(pid){
 function deleteParentAccount(pid){
   if(!checkPerm('delete')){showToast('ليس لديك صلاحية','error');return;}
   if(!confirm('حذف حساب ولي الأمر هذا؟'))return;
+  const acc=(DB.parentAccounts||[]).find(x=>x.id===pid);
+  // حذف من OneSignal تلقائياً
+  if(acc?.oneSignalPlayerId){
+    fetch(`https://onesignal.com/api/v1/players/${acc.oneSignalPlayerId}?app_id=9f33f90a-b85e-4fb5-8d9a-bf8a246a0979`,{
+      method:'DELETE',
+      headers:{'Authorization':'Basic os_v2_app_9f33f90a-b85e-4fb5-8d9a-bf8a246a0979'}
+    }).catch(()=>{});
+  }
+  if(acc?.studentId){
+    DB.parentNotifications=(DB.parentNotifications||[]).filter(n=>n.studentId!==acc.studentId);
+  }
   DB.parentAccounts=(DB.parentAccounts||[]).filter(x=>x.id!==pid);
-  saveDB(); renderUsers(); showToast('تم الحذف','success');
+  saveDB(); renderUsers(); showToast('✅ تم الحذف وإزالة الإشعارات','success');
 }
 
 function toggleShowPass(uid, pw){
@@ -6772,6 +6824,9 @@ function openParentPortal(student){
   document.getElementById('parentStudentName').textContent=`👤 ${student.name}`;
   window._parentStudent=student;
 
+  // تسجيل ولي الأمر في OneSignal بـ tags الصف والطالب
+  setTimeout(()=>tagParentInOneSignal(student), 2000);
+
   // عرض عدد الإشعارات غير المقروءة
   const unread=getParentUnreadCount(student.id);
   const notifTab=document.getElementById('parentNotifTab');
@@ -6783,7 +6838,11 @@ function openParentPortal(student){
   if('Notification' in window && Notification.permission==='default'){
     setTimeout(()=>{
       Notification.requestPermission().then(perm=>{
-        if(perm==='granted') showToast('✅ تم تفعيل الإشعارات — ستصلك تنبيهات فورية','success');
+        if(perm==='granted'){
+          showToast('✅ تم تفعيل الإشعارات — ستصلك تنبيهات فورية','success');
+          // سجّل الـ tags بعد الإذن مباشرة
+          setTimeout(()=>tagParentInOneSignal(student), 1000);
+        }
       });
     }, 2000);
   }
@@ -7129,6 +7188,109 @@ function sendParentCredentialsWA(studentId, email, pass){
 // ============================================================
 // ========= إشعارات أولياء الأمور ===========================
 // ============================================================
+// ============================================================
+// ======= OneSignal Push Notifications =======================
+// ============================================================
+
+// تسجيل tags لولي الأمر عند فتح البوابة + حفظ Player ID
+function tagParentInOneSignal(student){
+  try {
+    if(window.OneSignal && student){
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function(OneSignal){
+        // إرسال الـ tags
+        await OneSignal.sendTags({
+          grade: student.grade || 'عام',
+          studentId: student.id,
+          studentName: student.name,
+          groupId: student.groupId || '',
+          active: '1'
+        });
+        // حفظ الـ Player ID في قاعدة البيانات
+        try {
+          const playerId = await OneSignal.getUserId();
+          if(playerId){
+            const acc = (DB.parentAccounts||[]).find(p=>p.studentId===student.id);
+            if(acc){
+              acc.oneSignalPlayerId = playerId;
+              saveDB();
+            }
+          }
+        } catch(e){}
+      });
+    }
+  } catch(e){}
+}
+
+// حذف ولي الأمر من OneSignal
+async function removeParentFromOneSignal(studentId){
+  try {
+    const acc = (DB.parentAccounts||[]).find(p=>p.studentId===studentId);
+    const playerId = acc?.oneSignalPlayerId;
+    if(!playerId) return;
+    // حذف المستخدم من OneSignal عبر API
+    await fetch(`https://onesignal.com/api/v1/players/${playerId}?app_id=9f33f90a-b85e-4fb5-8d9a-bf8a246a0979`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': 'Basic os_v2_app_9f33f90a-b85e-4fb5-8d9a-bf8a246a0979'
+      }
+    }).catch(()=>{});
+    console.log('✅ تم حذف ولي الأمر من OneSignal:', playerId);
+  } catch(e){}
+}
+
+// إرسال إشعار لصف معين أو طالب معين
+function sendPushToParent(title, message, studentId, targetGrade, targetGroupId){
+  // تسجيل الإشعار في قاعدة البيانات
+  if(studentId) addParentNotification(studentId, 'push', message);
+
+  // بناء فلتر OneSignal بالـ tags
+  let filters = [];
+
+  if(studentId){
+    // إشعار لطالب معين بس (حضور/دفع)
+    filters = [
+      { field: 'tag', key: 'studentId', relation: '=', value: studentId }
+    ];
+  } else if(targetGroupId){
+    // إشعار لمجموعة معينة (فيديو مجموعة)
+    filters = [
+      { field: 'tag', key: 'groupId', relation: '=', value: targetGroupId }
+    ];
+  } else if(targetGrade){
+    // إشعار لصف معين (فيديو صف)
+    filters = [
+      { field: 'tag', key: 'grade', relation: '=', value: targetGrade }
+    ];
+  }
+
+  // إرسال عبر OneSignal API
+  try {
+    const body = {
+      app_id: '9f33f90a-b85e-4fb5-8d9a-bf8a246a0979',
+      headings: { ar: title, en: title },
+      contents: { ar: message, en: message },
+      url: 'https://desgin2026-code.github.io/qaisar',
+    };
+
+    // لو في فلتر محدد استخدمه — لو مفيش ابعت للكل
+    if(filters.length > 0){
+      body.filters = filters;
+    } else {
+      body.included_segments = ['Subscribed Users'];
+    }
+
+    fetch('https://onesignal.com/api/v1/notifications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic os_v2_app_9f33f90a-b85e-4fb5-8d9a-bf8a246a0979'
+      },
+      body: JSON.stringify(body)
+    }).catch(()=>{});
+  } catch(e){}
+}
+
 function addParentNotification(studentId, type, message){
   DB.parentNotifications=DB.parentNotifications||[];
   const notif={
