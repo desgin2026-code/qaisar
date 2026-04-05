@@ -7484,16 +7484,15 @@ function renderParentNotifications(student){
 // ========= Notification Permission Popup ====================
 // ============================================================
 function showNotifPopup(){
-  // لو الإشعارات مفعّلة أو محجوبة — ماتوضيش
-  if(typeof Notification !== 'undefined' && (Notification.permission === 'granted' || Notification.permission === 'denied')) return;
-  // لو مش بيدعم الإشعارات خالص
-  if(typeof Notification === 'undefined') return;
-  // لو ولي الأمر ضغط "لاحقاً" النهارده بس — ماتعرضيش
+  // لو الإشعارات مفعّلة بالفعل — ماتوضيش
+  if(typeof Notification !== 'undefined' && Notification.permission === 'granted') return;
+  // لو ولي الأمر ضغط "لاحقاً" النهارده — ماتعرضيش
   const todayStr = new Date().toDateString();
   if(localStorage.getItem('notifPopupDismissed') === todayStr) return;
   const popup = document.getElementById('notifPopup');
   if(popup){
     popup.style.display = 'flex';
+    popup.style.zIndex = '999999';
   }
 }
 
@@ -7512,34 +7511,33 @@ async function allowNotifFromPopup(){
   closeNotifPopup(true);
   const student = window._parentStudent;
 
-  // على iOS/أندرويد: OneSignal slidedown هيطلع لوحده لما نطلب التسجيل
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  window.OneSignalDeferred.push(async function(OneSignal){
-    try {
-      // هذا هو الاستدعاء الصحيح لإظهار طلب الإذن
-      await OneSignal.showSlidedownPrompt({ force: true });
-    } catch(e1){
-      try { await OneSignal.registerForPushNotifications(); } catch(e2){}
-    }
-    // بعد ثانيتين نشوف النتيجة
-    setTimeout(()=>{
-      if(typeof Notification !== 'undefined' && Notification.permission === 'granted'){
-        if(student) tagParentInOneSignal(student);
-        showToast('✅ تم تفعيل الإشعارات — هتوصلك أخبار ابنك فوراً 🔔','success');
-      }
-    }, 2000);
-  });
-
-  // Fallback مباشر لو OneSignal مش شغال
-  if(typeof Notification !== 'undefined' && Notification.permission === 'default'){
+  // أولاً: جرب عبر Notification API المباشر (الأسرع على أندرويد)
+  if(typeof Notification !== 'undefined'){
     try {
       const perm = await Notification.requestPermission();
       if(perm === 'granted'){
         if(student) tagParentInOneSignal(student);
-        showToast('✅ تم تفعيل الإشعارات 🔔','success');
+        showToast('✅ تم تفعيل الإشعارات — هتوصلك أخبار ابنك فوراً 🔔','success');
+        return;
       }
     } catch(e){}
   }
+
+  // ثانياً: عبر OneSignal
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(async function(OneSignal){
+    try {
+      await OneSignal.showSlidedownPrompt({ force: true });
+    } catch(e1){
+      try { await OneSignal.registerForPushNotifications(); } catch(e2){}
+    }
+    setTimeout(()=>{
+      if(typeof Notification !== 'undefined' && Notification.permission === 'granted'){
+        if(student) tagParentInOneSignal(student);
+        showToast('✅ تم تفعيل الإشعارات 🔔','success');
+      }
+    }, 2000);
+  });
 }
 
 let deferredInstallPrompt=null;
