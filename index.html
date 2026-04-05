@@ -10,9 +10,39 @@
     await OneSignal.init({
       appId: "9f33f90a-b85e-4fb5-8d9a-bf8a246a0979",
       safari_web_id: "web.onesignal.auto.59c3dafd-0ede-48fd-b632-a1606d17d410",
-      notifyButton: { enable: true },
       allowLocalhostAsSecureOrigin: true,
+      notifyButton: {
+        enable: true,
+        size: 'medium',
+        position: 'bottom-left',
+        text: {
+          'tip.state.unsubscribed': 'فعّل الإشعارات',
+          'tip.state.subscribed': 'الإشعارات مفعّلة ✅',
+          'tip.state.blocked': 'الإشعارات محجوبة',
+          'message.prenotify': 'اضغط للحصول على إشعارات فورية',
+          'message.action.subscribed': '✅ تم تفعيل الإشعارات!',
+          'message.action.resubscribed': '✅ تم تفعيل الإشعارات!',
+          'message.action.unsubscribed': 'تم إيقاف الإشعارات',
+          'dialog.main.title': '🔔 فعّل الإشعارات',
+          'dialog.main.button.subscribe': 'السماح بالإشعارات',
+          'dialog.main.button.unsubscribe': 'إيقاف',
+          'dialog.blocked.title': 'إلغاء الحجب',
+          'dialog.blocked.message': 'اتبع الخطوات لتفعيل الإشعارات'
+        }
+      },
+      promptOptions: {
+        slidedown: {
+          enabled: true,
+          autoPrompt: true,
+          timeDelay: 3,
+          pageViews: 1,
+          actionMessage: '🔔 فعّل الإشعارات عشان توصلك أخبار ابنك فوراً (حضور، غياب، دفع، فيديوهات)',
+          acceptButtonText: 'السماح بالإشعارات ✅',
+          cancelButtonText: 'لاحقاً',
+        }
+      }
     });
+
     // لما ولي الأمر يشترك — نضيفله tag بالصف والطالب
     OneSignal.on('subscriptionChange', async (isSubscribed) => {
       if(isSubscribed && window._parentStudent){
@@ -6899,12 +6929,41 @@ function renderParentSettings(student){
         <div id="parentPassErr" style="color:var(--danger);font-size:.83rem;margin-bottom:10px;display:none;"></div>
         <button class="btn btn-primary" style="width:100%;" onclick="changeParentPassword('${student.id}')">💾 حفظ كلمة المرور الجديدة</button>
       </div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:16px;">
-        <div class="section-title">🔔 إشعارات المتصفح</div>
-        <div style="font-size:.82rem;color:var(--txt2);margin-bottom:12px;">فعّل الإشعارات عشان توصلك تنبيهات فورية على تليفونك حتى لو البوابة مش مفتوحة</div>
-        <button class="btn btn-info" style="width:100%;" onclick="requestParentPushPermission()">🔔 تفعيل الإشعارات</button>
+      <div style="background:linear-gradient(135deg,rgba(201,162,39,.15),rgba(201,162,39,.05));border:2px solid rgba(201,162,39,.4);border-radius:var(--radius);padding:20px;margin-top:16px;">
+        <div class="section-title">🔔 إشعارات فورية</div>
+        <div style="font-size:.83rem;color:var(--txt2);margin-bottom:14px;line-height:1.7;">
+          فعّل الإشعارات عشان توصلك أخبار ابنك فوراً على تليفونك:<br>
+          ✅ لما يحضر أو يغيب<br>
+          💰 لما يدفع الاشتراك<br>
+          🎬 لما ينزل فيديو تعليمي جديد
+        </div>
+        <div id="notifStatusParent" style="font-size:.8rem;margin-bottom:10px;padding:8px 12px;border-radius:8px;background:rgba(0,0,0,.2);">
+          حالة الإشعارات: <span id="notifPermStatus" style="font-weight:700;">جاري التحقق...</span>
+        </div>
+        <button class="btn btn-primary" style="width:100%;padding:14px;font-size:.95rem;" onclick="requestParentPushPermission()">
+          🔔 فعّل الإشعارات الآن
+        </button>
+        <div style="font-size:.75rem;color:var(--txt3);margin-top:8px;text-align:center;">زي إشعارات الواتساب — بتيجي حتى لو البوابة مش مفتوحة</div>
       </div>
     </div>`;
+  // Check current notification status
+  setTimeout(()=>{
+    const statusEl=document.getElementById('notifPermStatus');
+    if(!statusEl) return;
+    if(!('Notification' in window)){
+      statusEl.textContent='متصفحك لا يدعم الإشعارات';
+      statusEl.style.color='var(--danger)';
+    } else if(Notification.permission==='granted'){
+      statusEl.textContent='✅ مفعّلة';
+      statusEl.style.color='var(--success)';
+    } else if(Notification.permission==='denied'){
+      statusEl.textContent='❌ محجوبة — راجع إعدادات المتصفح';
+      statusEl.style.color='var(--danger)';
+    } else {
+      statusEl.textContent='⚪ لم يتم التفعيل بعد';
+      statusEl.style.color='var(--warn)';
+    }
+  },300);
 }
 
 function changeParentPassword(studentId){
@@ -7173,9 +7232,8 @@ function sendParentCredentialsWA(studentId, email, pass){
   const account=(DB.parentAccounts||[]).find(p=>p.studentId===studentId);
   const finalPass=pass&&pass!=='••••••'?pass:(account?.password||'');
   const center=DB.settings.centerName||'سنتر القيصر';
-  // رابط GitHub Pages
   const siteUrl='desgin2026-code.github.io/qaisar';
-  const msg=`السلام عليكم 🌟\n\n*${center}*\n\nتم إنشاء حسابك على بوابة أولياء الأمور لمتابعة ابنك *${s.name}* 👨‍👩‍👦\n\n🔗 رابط البرنامج:\nhttps://${siteUrl}\n\n📧 البريد الإلكتروني:\n${email}\n\n🔑 كلمة المرور:\n${finalPass||'(كلمة المرور التي تم تحديدها)'}\n\n*خطوات الدخول:*\n١. افتح الرابط\n٢. اضغط "دخول ولي الأمر"\n٣. أدخل البريد وكلمة المرور\n\nمن خلال حسابك تقدر تتابع:\n✅ الحضور والغياب\n📝 نتائج الامتحانات\n💰 حالة المدفوعات\n📅 الجدول الدراسي\n\nللمساعدة تواصل معنا 🙏`;
+  const msg=`السلام عليكم 🌟\n\n*${center}*\n\nتم إنشاء حسابك على بوابة أولياء الأمور لمتابعة ابنك *${s.name}* 👨‍👩‍👦\n\n🔗 *رابط البرنامج:*\nhttps://${siteUrl}\n\n🔑 *كلمة المرور:*\n${finalPass||'(كلمة المرور التي تم تحديدها)'}\n\n━━━━━━━━━━━━━━━━\n*خطوات الدخول:*\n١. افتح الرابط\n٢. اضغط "دخول ولي الأمر"\n٣. أدخل كلمة المرور\n\n━━━━━━━━━━━━━━━━\n🔔 *مهم جداً — تفعيل الإشعارات:*\nبعد الدخول هيظهر لك سؤال\n"هل تسمح بالإشعارات؟"\n👈 اضغط *السماح / Allow*\n\nبعدها هتوصلك إشعارات فورية على تليفونك لما:\n✅ ابنك يحضر أو يغيب\n💰 يتسجل دفعة\n🎬 ينزل فيديو تعليمي جديد\n\nزي بالظبط إشعارات الواتساب 📲\n\n━━━━━━━━━━━━━━━━\n*من خلال حسابك تقدر تتابع:*\n✅ الحضور والغياب بالتاريخ\n📝 نتائج الامتحانات\n💰 حالة المدفوعات\n📅 الجدول الدراسي\n🎬 الفيديوهات التعليمية\n\nللمساعدة تواصل معنا 🙏`;
   const clean=phone.replace(/\D/g,'');
   let waPhone=clean.startsWith('20')?clean:clean.startsWith('0')?'2'+clean:'20'+clean;
   window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`,'_blank');
@@ -7322,14 +7380,45 @@ function sendBrowserPushToParent(studentId, message){
 
 function requestParentPushPermission(){
   if(!('Notification' in window)){
-    showToast('متصفحك لا يدعم الإشعارات','warning'); return;
+    showToast('متصفحك لا يدعم الإشعارات — جرّب Chrome','warning'); return;
   }
   if(Notification.permission==='granted'){
-    showToast('✅ الإشعارات مفعّلة بالفعل','success'); return;
+    // already granted - just register with OneSignal
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async function(OneSignal){
+      const isEnabled = await OneSignal.isPushNotificationsEnabled();
+      if(!isEnabled) await OneSignal.registerForPushNotifications();
+      if(window._parentStudent) tagParentInOneSignal(window._parentStudent);
+      showToast('✅ الإشعارات مفعّلة — ستوصلك أخبار ابنك فوراً','success');
+    });
+    return;
   }
-  Notification.requestPermission().then(perm=>{
-    if(perm==='granted') showToast('✅ تم تفعيل الإشعارات','success');
-    else showToast('تم رفض الإشعارات — يمكن تفعيلها من إعدادات المتصفح','warning');
+  if(Notification.permission==='denied'){
+    showToast('الإشعارات محجوبة — افتح إعدادات المتصفح وفعّلها يدوياً','warning');
+    alert('لتفعيل الإشعارات:\n١. اضغط على 🔒 أو ⓘ جنب الرابط في المتصفح\n٢. ابحث عن "Notifications" أو "الإشعارات"\n٣. اختر "Allow" أو "السماح"\n٤. أعد تحميل الصفحة');
+    return;
+  }
+  // Request permission via OneSignal
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(async function(OneSignal){
+    try {
+      await OneSignal.registerForPushNotifications();
+      const perm = await OneSignal.getNotificationPermission();
+      if(perm==='granted'){
+        if(window._parentStudent) tagParentInOneSignal(window._parentStudent);
+        showToast('✅ تم تفعيل الإشعارات بنجاح! ستوصلك أخبار ابنك فوراً 🔔','success');
+      } else {
+        showToast('لم يتم السماح بالإشعارات','warning');
+      }
+    } catch(e){
+      // Fallback to native
+      Notification.requestPermission().then(perm=>{
+        if(perm==='granted'){
+          if(window._parentStudent) tagParentInOneSignal(window._parentStudent);
+          showToast('✅ تم تفعيل الإشعارات','success');
+        }
+      });
+    }
   });
 }
 
