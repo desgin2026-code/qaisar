@@ -90,6 +90,22 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
 ::-webkit-scrollbar-thumb{background:var(--gold3);border-radius:3px;}
 ::-webkit-scrollbar-thumb:hover{background:var(--gold);}
 
+/* ======= NOTIF PERMISSION POPUP ======= */
+#notifPopup{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.75);display:none;align-items:flex-end;justify-content:center;padding-bottom:0;}
+#notifPopup.show{display:flex;animation:fadeIn .3s ease;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.notif-sheet{background:linear-gradient(180deg,#0e1f35 0%,#050d1a 100%);border-radius:24px 24px 0 0;padding:28px 24px 36px;width:100%;max-width:480px;border-top:2px solid rgba(201,162,39,.4);animation:slideUp .35s ease;}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.notif-sheet-icon{font-size:3rem;text-align:center;margin-bottom:12px;}
+.notif-sheet-title{font-size:1.25rem;font-weight:900;color:var(--gold2);text-align:center;margin-bottom:8px;}
+.notif-sheet-desc{font-size:.88rem;color:var(--txt2);text-align:center;line-height:1.9;margin-bottom:20px;}
+.notif-sheet-features{display:flex;flex-direction:column;gap:8px;margin-bottom:22px;}
+.notif-feature{display:flex;align-items:center;gap:10px;background:rgba(201,162,39,.07);border:1px solid rgba(201,162,39,.2);border-radius:10px;padding:10px 14px;font-size:.85rem;color:var(--txt);}
+.notif-feature-icon{font-size:1.2rem;min-width:26px;text-align:center;}
+.notif-btn-allow{width:100%;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0a1628;font-family:'Cairo',sans-serif;font-size:1.05rem;font-weight:900;border:none;border-radius:14px;padding:16px;cursor:pointer;margin-bottom:10px;transition:.2s;}
+.notif-btn-allow:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(201,162,39,.4);}
+.notif-btn-later{width:100%;background:transparent;color:var(--txt3);font-family:'Cairo',sans-serif;font-size:.85rem;border:none;cursor:pointer;padding:8px;}
+
 /* ======= SPLASH / LOGIN ======= */
 #splash{position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse at 30% 40%,#0e2040 0%,#050d1a 60%);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;}
 .stars{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
@@ -6864,18 +6880,8 @@ function openParentPortal(student){
 
   renderParentOverview(student);
 
-  // طلب إذن إشعارات المتصفح
-  if('Notification' in window && Notification.permission==='default'){
-    setTimeout(()=>{
-      Notification.requestPermission().then(perm=>{
-        if(perm==='granted'){
-          showToast('✅ تم تفعيل الإشعارات — ستصلك تنبيهات فورية','success');
-          // سجّل الـ tags بعد الإذن مباشرة
-          setTimeout(()=>tagParentInOneSignal(student), 1000);
-        }
-      });
-    }, 2000);
-  }
+  // إظهار popup تفعيل الإشعارات (لو لسه ما اتفعلوش)
+  setTimeout(()=> showNotifPopup(), 1500);
 }
 
 function doParentLogout(){
@@ -7455,6 +7461,61 @@ function renderParentNotifications(student){
     </div>`;
 }
 
+// ============================================================
+// ========= Notification Permission Popup ====================
+// ============================================================
+function showNotifPopup(){
+  // لو الإشعارات مفعّلة أو محجوبة — ماتوضيش البوب أب
+  if(!('Notification' in window)) return;
+  if(Notification.permission === 'granted' || Notification.permission === 'denied') return;
+  // لو ولي الأمر سبق وغلّق البوب أب في نفس الجلسة — ماتعرضيش
+  if(sessionStorage.getItem('notifPopupShown')) return;
+  const popup = document.getElementById('notifPopup');
+  if(popup) popup.classList.add('show');
+}
+
+function closeNotifPopup(rememberChoice){
+  const popup = document.getElementById('notifPopup');
+  if(popup) popup.classList.remove('show');
+  if(rememberChoice) sessionStorage.setItem('notifPopupShown','1');
+}
+
+async function allowNotifFromPopup(){
+  closeNotifPopup(true);
+  const student = window._parentStudent;
+  try {
+    // طلب الإذن عبر OneSignal
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async function(OneSignal){
+      try {
+        await OneSignal.registerForPushNotifications();
+        const perm = Notification.permission;
+        if(perm === 'granted'){
+          if(student) tagParentInOneSignal(student);
+          showToast('✅ تم تفعيل الإشعارات — هتوصلك أخبار ابنك فوراً 🔔','success');
+        } else {
+          showToast('لم يتم السماح بالإشعارات — يمكنك التفعيل من الإعدادات','warning');
+        }
+      } catch(e){
+        // Fallback
+        Notification.requestPermission().then(perm=>{
+          if(perm==='granted'){
+            if(student) tagParentInOneSignal(student);
+            showToast('✅ تم تفعيل الإشعارات','success');
+          }
+        });
+      }
+    });
+  } catch(e){
+    Notification.requestPermission().then(perm=>{
+      if(perm==='granted'){
+        if(student) tagParentInOneSignal(student);
+        showToast('✅ تم تفعيل الإشعارات','success');
+      }
+    });
+  }
+}
+
 let deferredInstallPrompt=null;
 
 window.addEventListener('beforeinstallprompt',(e)=>{
@@ -7514,5 +7575,25 @@ if('serviceWorker' in navigator && location.hostname.includes('github.io')){
   });
 }
 </script>
+
+<!-- ===== Notification Permission Popup ===== -->
+<div id="notifPopup">
+  <div class="notif-sheet">
+    <div class="notif-sheet-icon">🔔</div>
+    <div class="notif-sheet-title">فعّل إشعارات ابنك الآن</div>
+    <div class="notif-sheet-desc">
+      خليك على علم بكل حاجة تخص ابنك<br>فور ما تحصل — حتى لو البوابة مش مفتوحة
+    </div>
+    <div class="notif-sheet-features">
+      <div class="notif-feature"><span class="notif-feature-icon">✅</span> لما يحضر أو يغيب في السنتر</div>
+      <div class="notif-feature"><span class="notif-feature-icon">💰</span> لما يتسجل دفع الاشتراك</div>
+      <div class="notif-feature"><span class="notif-feature-icon">🎬</span> لما ينزل فيديو تعليمي جديد</div>
+      <div class="notif-feature"><span class="notif-feature-icon">📝</span> نتائج الامتحانات والدرجات</div>
+    </div>
+    <button class="notif-btn-allow" onclick="allowNotifFromPopup()">🔔 السماح بالإشعارات</button>
+    <button class="notif-btn-later" onclick="closeNotifPopup(true)">لاحقاً</button>
+  </div>
+</div>
+
 </body>
 </html>
