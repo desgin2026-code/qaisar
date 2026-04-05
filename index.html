@@ -4393,7 +4393,7 @@ function deleteParentAccount(pid){
   if(acc?.oneSignalPlayerId){
     fetch(`https://onesignal.com/api/v1/players/${acc.oneSignalPlayerId}?app_id=9f33f90a-b85e-4fb5-8d9a-bf8a246a0979`,{
       method:'DELETE',
-      headers:{'Authorization':'Basic os_v2_app_9f33f90a-b85e-4fb5-8d9a-bf8a246a0979'}
+      headers:{'Authorization':'Basic os_v2_app_t4z7scvylzh3ldm2x6fci2qjpfx5jmxp6g4ufen52p2tmqozez6zzngdu44zastmzjriyrljnuq232nia7v3ydrdawsilpv5cr2urvy'}
     }).catch(()=>{});
   }
   if(acc?.studentId){
@@ -7232,7 +7232,7 @@ async function removeParentFromOneSignal(studentId){
     await fetch(`https://onesignal.com/api/v1/players/${playerId}?app_id=9f33f90a-b85e-4fb5-8d9a-bf8a246a0979`, {
       method: 'DELETE',
       headers: {
-        'Authorization': 'Basic os_v2_app_9f33f90a-b85e-4fb5-8d9a-bf8a246a0979'
+        'Authorization': 'Basic os_v2_app_t4z7scvylzh3ldm2x6fci2qjpfx5jmxp6g4ufen52p2tmqozez6zzngdu44zastmzjriyrljnuq232nia7v3ydrdawsilpv5cr2urvy'
       }
     }).catch(()=>{});
     console.log('✅ تم حذف ولي الأمر من OneSignal:', playerId);
@@ -7284,7 +7284,7 @@ function sendPushToParent(title, message, studentId, targetGrade, targetGroupId)
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Basic os_v2_app_9f33f90a-b85e-4fb5-8d9a-bf8a246a0979'
+        'Authorization': 'Basic os_v2_app_t4z7scvylzh3ldm2x6fci2qjpfx5jmxp6g4ufen52p2tmqozez6zzngdu44zastmzjriyrljnuq232nia7v3ydrdawsilpv5cr2urvy'
       },
       body: JSON.stringify(body)
     }).catch(()=>{});
