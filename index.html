@@ -7044,9 +7044,8 @@ function renderParentOverview(student){
   const notes=(DB.notes||[]).filter(n=>n.studentId===student.id).slice(-3);
 
   // بانر تفعيل الإشعارات
-  const notifDismissed = localStorage.getItem('notifBannerDismissed');
   const notifGranted = (typeof Notification !== 'undefined' && Notification.permission === 'granted');
-  const notifBanner = (!notifGranted && !notifDismissed) ? `
+  const notifBanner = (!notifGranted) ? `
     <div id="notifBanner" style="background:linear-gradient(135deg,rgba(201,162,39,.15),rgba(201,162,39,.05));border:2px solid rgba(201,162,39,.5);border-radius:14px;padding:16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <span style="font-size:1.8rem;">🔔</span>
       <div style="flex:1;min-width:180px;">
