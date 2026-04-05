@@ -7488,9 +7488,13 @@ function renderParentNotifications(student){
 function showNotifPopup(){
   // لو الإشعارات مفعّلة بالفعل — ماتوضيش
   if(typeof Notification !== 'undefined' && Notification.permission === 'granted') return;
+  // لو الإشعارات محجوبة تماماً — ماتوضيش
+  if(typeof Notification !== 'undefined' && Notification.permission === 'denied') return;
   // لو ولي الأمر ضغط "لاحقاً" النهارده — ماتعرضيش
   const todayStr = new Date().toDateString();
   if(localStorage.getItem('notifPopupDismissed') === todayStr) return;
+  // لو OneSignal اشترك بالفعل — ماتوضيش
+  if(localStorage.getItem('onesignal-notification-prompt') === 'true') return;
   const popup = document.getElementById('notifPopup');
   if(popup){
     popup.style.display = 'flex';
@@ -7513,33 +7517,43 @@ async function allowNotifFromPopup(){
   closeNotifPopup(true);
   const student = window._parentStudent;
 
-  // أولاً: جرب عبر Notification API المباشر (الأسرع على أندرويد)
-  if(typeof Notification !== 'undefined'){
-    try {
-      const perm = await Notification.requestPermission();
-      if(perm === 'granted'){
-        if(student) tagParentInOneSignal(student);
-        showToast('✅ تم تفعيل الإشعارات — هتوصلك أخبار ابنك فوراً 🔔','success');
-        return;
-      }
-    } catch(e){}
-  }
-
-  // ثانياً: عبر OneSignal
+  // أولاً: عبر OneSignal (الأفضل على موبايل)
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   window.OneSignalDeferred.push(async function(OneSignal){
     try {
-      await OneSignal.showSlidedownPrompt({ force: true });
+      await OneSignal.showNativePrompt();
     } catch(e1){
-      try { await OneSignal.registerForPushNotifications(); } catch(e2){}
-    }
-    setTimeout(()=>{
-      if(typeof Notification !== 'undefined' && Notification.permission === 'granted'){
-        if(student) tagParentInOneSignal(student);
-        showToast('✅ تم تفعيل الإشعارات 🔔','success');
+      try { await OneSignal.showSlidedownPrompt({ force: true }); } catch(e2){
+        try { await OneSignal.registerForPushNotifications(); } catch(e3){}
       }
-    }, 2000);
+    }
+    setTimeout(async ()=>{
+      let granted = false;
+      try {
+        const state = await OneSignal.getNotificationPermission();
+        granted = state === 'granted';
+      } catch(e){
+        granted = (typeof Notification !== 'undefined' && Notification.permission === 'granted');
+      }
+      if(granted){
+        localStorage.setItem('onesignal-notification-prompt','true');
+        if(student) tagParentInOneSignal(student);
+        showToast('تم تفعيل الإشعارات هتوصلك أخبار ابنك فوراً','success');
+      }
+    }, 2500);
   });
+
+  // ثانياً: Notification API المباشر كـ fallback
+  if(typeof Notification !== 'undefined' && Notification.permission === 'default'){
+    try {
+      const perm = await Notification.requestPermission();
+      if(perm === 'granted'){
+        localStorage.setItem('onesignal-notification-prompt','true');
+        if(student) tagParentInOneSignal(student);
+        showToast('تم تفعيل الإشعارات هتوصلك أخبار ابنك فوراً','success');
+      }
+    } catch(e){}
+  }
 }
 
 let deferredInstallPrompt=null;
