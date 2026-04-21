@@ -414,6 +414,55 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
 @keyframes waPulse{0%,100%{box-shadow:0 6px 24px rgba(37,211,102,.3);}50%{box-shadow:0 6px 32px rgba(37,211,102,.6);}}
 .btn-whatsapp{animation:waPulse 2.5s ease-in-out infinite;}
 .btn-whatsapp:hover{animation:none;}
+
+/* ===== ONLINE EXAMS SYSTEM CSS ===== */
+.oe-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:14px;transition:.2s;}
+.oe-card:hover{border-color:var(--gold);box-shadow:0 4px 20px rgba(201,162,39,.15);}
+.oe-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;}
+.oe-badge-pending{background:rgba(52,152,219,.2);color:#3498db;}
+.oe-badge-active{background:rgba(39,174,96,.2);color:#27ae60;}
+.oe-badge-done{background:rgba(201,162,39,.2);color:var(--gold2);}
+.oe-badge-expired{background:rgba(192,57,43,.2);color:#e74c3c;}
+.oe-timer{font-size:2rem;font-weight:900;color:var(--gold2);text-align:center;padding:12px;background:var(--bg3);border-radius:12px;border:2px solid var(--border);letter-spacing:4px;font-family:monospace;}
+.oe-timer.danger{color:#e74c3c;border-color:#e74c3c;animation:timerPulse .6s ease-in-out infinite;}
+@keyframes timerPulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+.oe-question{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px;}
+.oe-question-num{font-size:.75rem;color:var(--txt3);margin-bottom:6px;}
+.oe-question-text{font-size:1rem;font-weight:700;color:var(--txt);margin-bottom:14px;line-height:1.7;}
+.oe-option{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);margin-bottom:8px;cursor:pointer;transition:.2s;font-size:.9rem;}
+.oe-option:hover{border-color:var(--gold);background:rgba(201,162,39,.07);}
+.oe-option.selected{border-color:var(--gold);background:rgba(201,162,39,.15);color:var(--gold2);font-weight:700;}
+.oe-option.correct{border-color:#27ae60;background:rgba(39,174,96,.15);color:#27ae60;font-weight:700;}
+.oe-option.wrong{border-color:#e74c3c;background:rgba(192,57,43,.15);color:#e74c3c;}
+.oe-option input[type=radio]{accent-color:var(--gold);}
+.oe-progress{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:20px;}
+.oe-progress-bar{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:3px;transition:width .4s;}
+.oe-result-ring{width:120px;height:120px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:0 auto 16px;font-size:1.6rem;font-weight:900;border:6px solid var(--gold);}
+.oe-result-ring.pass{border-color:#27ae60;color:#27ae60;}
+.oe-result-ring.fail{border-color:#e74c3c;color:#e74c3c;}
+.oe-builder-q{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;position:relative;}
+.oe-builder-q .remove-q{position:absolute;top:10px;left:10px;background:none;border:none;color:var(--danger);font-size:1.1rem;cursor:pointer;}
+/* Target selector cards */
+.oe-type-tab{flex:1;padding:8px 10px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg2);color:var(--txt2);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;transition:.2s;text-align:center;}
+.oe-type-tab:hover{border-color:var(--gold);color:var(--gold2);}
+.oe-type-tab.active{background:linear-gradient(135deg,var(--gold3),var(--gold));color:#0a1628;border-color:var(--gold);font-weight:800;}
+.oe-target-card{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:11px;border:1.5px solid var(--border);background:var(--bg2);cursor:pointer;transition:.2s;user-select:none;}
+.oe-target-card:hover{border-color:var(--gold);background:rgba(201,162,39,.06);}
+.oe-target-card.selected{border-color:var(--gold);background:rgba(201,162,39,.14);box-shadow:0 0 0 2px rgba(201,162,39,.25);}
+.oe-target-icon{font-size:1.4rem;width:36px;text-align:center;flex-shrink:0;}
+.oe-target-info{flex:1;}
+.oe-target-name{font-size:.9rem;font-weight:700;color:var(--txt);}
+.oe-target-sub{font-size:.75rem;color:var(--txt3);margin-top:2px;}
+.oe-target-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.7rem;color:transparent;transition:.2s;flex-shrink:0;}
+.oe-target-card.selected .oe-target-check{background:var(--gold);border-color:var(--gold);color:#0a1628;font-weight:900;}
+/* Add question type buttons */
+.oe-add-q-btn{padding:8px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg2);color:var(--txt2);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;transition:.2s;}
+.oe-add-q-btn:hover{border-color:var(--gold);color:var(--gold2);background:rgba(201,162,39,.07);}
+/* Essay grading pending badge */
+.oe-pending-tab{border-color:rgba(231,76,60,.5)!important;color:#e74c3c!important;}
+/* Keyboard focus outlines */
+.nav-item:focus,.inner-tab:focus,.oe-target-card:focus,.btn:focus{outline:2px solid var(--gold);outline-offset:2px;}
+.nav-item:focus-visible,.inner-tab:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -510,6 +559,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
       <div class="inner-tab" onclick="switchParentTab('videos',this)">🎬 الفيديوهات</div>
       <div class="inner-tab" onclick="switchParentTab('notifications',this)" id="parentNotifTab">🔔 الإشعارات</div>
       <div class="inner-tab" onclick="switchParentTab('settings',this)">⚙️ إعداداتي</div>
+      <div class="inner-tab" onclick="switchParentTab('onlineExams',this)">🖥️ امتحاناتي</div>
       <div class="inner-tab" onclick="switchParentTab('contact',this)">📞 تواصل معنا</div>
     </div>
     <div id="parentContent"></div>
@@ -691,8 +741,15 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
         <button class="btn btn-secondary" onclick="refreshAll()">🔄 تحديث</button>
         <button class="btn btn-secondary" onclick="exportPDF('exams')">📄 PDF</button>
         <button class="btn btn-primary" onclick="openModal('addExam')" id="addExamBtn">➕ امتحان جديد</button>
+        <button class="btn btn-success" onclick="openOnlineExamBuilder()" style="background:linear-gradient(135deg,#27ae60,#1e8449);">🖥️ امتحان أونلاين</button>
+      </div>
+      <!-- Online Exams Sub-tabs -->
+      <div class="inner-tabs" style="max-width:500px;margin-bottom:16px;" id="examSubTabs">
+        <div class="inner-tab active" id="examSubTab-grades" onclick="switchExamSubTab('grades',this)">📊 الدرجات التقليدية</div>
+        <div class="inner-tab" id="examSubTab-online" onclick="switchExamSubTab('online',this)">🖥️ الامتحانات الأونلاين</div>
       </div>
       <div id="examsContent"></div>
+      <div id="onlineExamsContent" style="display:none;"></div>
     </div>
 
     <!-- ========== PERFORMANCE ========== -->
@@ -1267,16 +1324,29 @@ service cloud.firestore {
 function initDB(){
   const saved = localStorage.getItem(STORE_KEY);
   if(saved){ try{ DB = JSON.parse(saved); } catch(e){ DB = {}; } }
+
+  // ضمان وجود يوزر الأدمن دايماً بكلمة المرور الصحيحة
+  const adminPerms = {students:true,groups:true,attendance:true,exams:true,payments:true,notes:true,
+    files:true,schedule:true,users:true,settings:true,delete:true,reports:true,
+    profits:true,bulkMsg:true,archive:true};
+  const adminDefault = {id:'u1',username:'admin',password:'admin123',name:'القيصر أحمد حسن',role:'admin',permissions:adminPerms};
+  if(!DB.users) DB.users = [];
+  const adminIdx = DB.users.findIndex(x=>x.username==='admin');
+  if(adminIdx === -1){
+    DB.users.unshift(adminDefault);
+  } else {
+    // تأكد إن الـ admin عنده كل الصلاحيات
+    DB.users[adminIdx].role = 'admin';
+    if(!DB.users[adminIdx].permissions) DB.users[adminIdx].permissions = adminPerms;
+  }
+
   const defaults = {
-    users:[{id:'u1',username:'admin',password:'admin123',name:'القيصر أحمد حسن',role:'admin',
-      permissions:{students:true,groups:true,attendance:true,exams:true,payments:true,notes:true,
-        files:true,schedule:true,users:true,settings:true,delete:true,reports:true,
-        profits:true,bulkMsg:true,archive:true}}],
+    users:[adminDefault],
     students:[],groups:[],attendance:[],exams:[],payments:[],notes:[],commLog:[],
     notifications:[],files:[],schedule:[],
     employees:[],empAttendance:[],empLeaves:[],
     accounting:[],cashbox:{balance:0,transactions:[]},
-    tasks:[],parentAccounts:[],sentMessages:{},parentNotifications:[],videos:[],
+    tasks:[],parentAccounts:[],sentMessages:{},parentNotifications:[],videos:[],onlineExams:[],onlineResults:[],
     settings:{
       centerName:'سنتر القيصر',teacherName:'القيصر أحمد حسن',
       grades:['الأول الإعدادي','الثاني الإعدادي','الثالث الإعدادي',
@@ -5463,6 +5533,60 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('loginUser').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
   // Global date change updates header
   document.getElementById('globalDate').addEventListener('change',()=>{ updateHeaderDate(); renderDashboard(); });
+
+  // ── Global keyboard navigation ──
+  document.addEventListener('keydown', e=>{
+    const tag=document.activeElement?.tagName;
+    const inInput=tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT';
+
+    // Enter on focused button
+    if(e.key==='Enter' && tag==='BUTTON' && !inInput){
+      document.activeElement.click(); return;
+    }
+
+    // Modal: Escape closes
+    if(e.key==='Escape'){
+      const modal=document.getElementById('modalOverlay');
+      if(modal?.classList.contains('show')){ closeModal(); return; }
+    }
+
+    // Arrow keys navigate sidebar nav items (only when not in input)
+    if(!inInput && (e.key==='ArrowDown'||e.key==='ArrowUp')){
+      const navItems=[...document.querySelectorAll('.nav-item:not([style*="display:none"])')];
+      if(!navItems.length) return;
+      const focused=navItems.findIndex(n=>n===document.activeElement);
+      let next=focused===-1?0:e.key==='ArrowDown'?focused+1:focused-1;
+      next=Math.max(0,Math.min(navItems.length-1,next));
+      navItems[next].focus();
+      e.preventDefault(); return;
+    }
+
+    // Arrow keys navigate inner-tabs
+    if(!inInput && (e.key==='ArrowRight'||e.key==='ArrowLeft')){
+      const tabs=[...document.querySelectorAll('.inner-tabs:not([style*="display:none"]) .inner-tab')];
+      if(!tabs.length) return;
+      const focused=tabs.findIndex(t=>t===document.activeElement);
+      let next=focused===-1?0:e.key==='ArrowLeft'?focused+1:focused-1;
+      next=Math.max(0,Math.min(tabs.length-1,next));
+      tabs[next].focus();
+      tabs[next].click();
+      e.preventDefault(); return;
+    }
+
+    // Tab key cycles focusable modal elements naturally (browser default)
+    // Space / Enter activates focused nav-item
+    if((e.key==='Enter'||e.key===' ') && tag==='DIV'){
+      const el=document.activeElement;
+      if(el?.classList.contains('nav-item')||el?.classList.contains('inner-tab')||el?.classList.contains('oe-target-card')){
+        el.click(); e.preventDefault();
+      }
+    }
+  });
+
+  // Make nav items keyboard-focusable
+  document.querySelectorAll('.nav-item, .inner-tab').forEach(el=>{
+    if(!el.getAttribute('tabindex')) el.setAttribute('tabindex','0');
+  });
 });
 // ============================================================
 // =================== EMPLOYEES ==============================
@@ -6939,7 +7063,988 @@ function switchParentTab(tab,btn){
   else if(tab==='videos') renderParentVideos(student);
   else if(tab==='notifications') renderParentNotifications(student);
   else if(tab==='settings') renderParentSettings(student);
+  else if(tab==='onlineExams') renderParentOnlineExams();
   else if(tab==='contact') renderParentContact();
+}
+
+
+/* ========================================================
+   ONLINE EXAMS SYSTEM — نظام الامتحانات الأونلاين
+   ======================================================== */
+
+// ---- sub-tab switcher (admin side) ----
+function switchExamSubTab(tab, el){
+  document.querySelectorAll('#examSubTabs .inner-tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  if(tab==='grades'){
+    document.getElementById('examsContent').style.display='';
+    document.getElementById('onlineExamsContent').style.display='none';
+    renderExams();
+  } else {
+    document.getElementById('examsContent').style.display='none';
+    document.getElementById('onlineExamsContent').style.display='';
+    renderOnlineExamsList();
+  }
+}
+
+// ---- render admin online exams list ----
+function renderOnlineExamsList(){
+  const div=document.getElementById('onlineExamsContent'); if(!div)return;
+  const list=(DB.onlineExams||[]).slice().reverse();
+  if(!list.length){
+    div.innerHTML=`<div class="empty-state"><div class="empty-icon">🖥️</div><div class="empty-txt">لا يوجد امتحانات أونلاين بعد<br><button class="btn btn-primary" style="margin-top:12px;" onclick="openOnlineExamBuilder()">➕ إنشاء امتحان أونلاين</button></div></div>`;
+    return;
+  }
+  div.innerHTML=`<div style="display:grid;gap:12px;">
+  ${list.map(ex=>{
+    const results=(DB.onlineResults||[]).filter(r=>r.examId===ex.id);
+    const assigned=ex.targetType==='grade'?`📚 صف: ${ex.targetId}`
+      :ex.targetType==='group'?`👥 مجموعة: ${getGroupName(ex.targetId)||'—'}`
+      :`👤 طالب: ${(DB.students||[]).find(s=>s.id===ex.targetId)?.name||'—'}`;
+    return `<div class="oe-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="font-size:1rem;font-weight:900;color:var(--gold2);">🖥️ ${ex.title}</div>
+          <div style="font-size:.8rem;color:var(--txt2);margin-top:4px;">📚 ${ex.subject||'—'} &nbsp;|&nbsp; ⏱️ ${ex.timeLimit} دقيقة &nbsp;|&nbsp; ❓ ${(ex.questions||[]).length} سؤال &nbsp;|&nbsp; 👥 ${assigned}</div>
+          <div style="font-size:.78rem;color:var(--txt3);margin-top:2px;">📅 ${fmtDate(ex.createdAt?.slice(0,10)||'')} &nbsp;|&nbsp; ✅ ${results.length} نتيجة</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-xs btn-secondary" onclick="viewOnlineExamResults('${ex.id}')">📊 النتائج</button>
+          <button class="btn btn-xs btn-danger" onclick="deleteOnlineExam('${ex.id}')">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('')}
+  </div>`;
+}
+
+function deleteOnlineExam(id){
+  if(!confirm('حذف هذا الامتحان؟')) return;
+  DB.onlineExams=(DB.onlineExams||[]).filter(e=>e.id!==id);
+  DB.onlineResults=(DB.onlineResults||[]).filter(r=>r.examId!==id);
+  saveDB(); renderOnlineExamsList(); showToast('تم الحذف','success');
+}
+
+function viewOnlineExamResults(id){
+  const ex=(DB.onlineExams||[]).find(e=>e.id===id); if(!ex)return;
+  const allStudents=(DB.students||[]).filter(s=>{
+    return (ex.targetType==='student'&&ex.targetId===s.id)||
+           (ex.targetType==='group'&&ex.targetId===s.groupId)||
+           (ex.targetType==='grade'&&ex.targetId===s.grade);
+  });
+  const results=(DB.onlineResults||[]).filter(r=>r.examId===id);
+  const essayQ=(ex.questions||[]).filter(q=>q.type==='essay');
+  const autoQ=(ex.questions||[]).filter(q=>q.type!=='essay');
+  document.getElementById('modalTitle').textContent='📊 نتائج: '+ex.title;
+  document.getElementById('modalBox').classList.add('modal-lg');
+
+  const hasPending=essayQ.length>0&&results.some(r=>r.essayPending);
+  const pendingCount=results.filter(r=>r.essayPending).length;
+
+  document.getElementById('modalBody').innerHTML=`
+    <style>
+      .res-tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:10px;}
+      .res-tab{padding:7px 18px;border-radius:9px;border:1px solid var(--border);background:var(--bg2);color:var(--txt2);cursor:pointer;font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:700;transition:.2s;}
+      .res-tab.active{background:linear-gradient(135deg,rgba(201,162,39,.25),rgba(201,162,39,.08));color:var(--gold2);border-color:rgba(201,162,39,.4);}
+      .res-tab.pending-tab{border-color:rgba(231,76,60,.4);color:#e74c3c;}
+      .res-tab.pending-tab.active{background:rgba(231,76,60,.15);}
+      /* Student list */
+      .stu-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);margin-bottom:7px;cursor:pointer;transition:.2s;}
+      .stu-row:hover{border-color:var(--gold3);background:var(--bg3);}
+      .stu-row.selected{border-color:var(--gold);background:rgba(201,162,39,.07);}
+      .stu-avatar-sm{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:800;color:#0a1628;flex-shrink:0;}
+      .stu-info{flex:1;min-width:0;}
+      .stu-name{font-size:.9rem;font-weight:800;color:var(--txt);}
+      .stu-sub{font-size:.75rem;color:var(--txt2);margin-top:2px;}
+      .stu-status-badge{font-size:.72rem;padding:3px 10px;border-radius:20px;font-weight:700;white-space:nowrap;}
+      .stu-score-badge{font-size:.82rem;font-weight:900;white-space:nowrap;}
+      /* Grading panel */
+      .grade-panel{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;}
+      .grade-q-block{background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:12px;}
+      .grade-answer-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;margin:8px 0;line-height:1.8;font-size:.88rem;}
+      .grade-model-box{background:rgba(39,174,96,.07);border:1px solid rgba(39,174,96,.2);border-radius:8px;padding:10px;margin:8px 0;line-height:1.8;font-size:.86rem;}
+      .grade-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;}
+      .grade-btn{border:2px solid;border-radius:9px;padding:6px 16px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;background:transparent;transition:.2s;}
+      .grade-btn.full{border-color:rgba(39,174,96,.5);color:#27ae60;}
+      .grade-btn.full:hover,.grade-btn.full.sel{background:#27ae60;color:#fff;border-color:#27ae60;}
+      .grade-btn.zero{border-color:rgba(231,76,60,.5);color:#e74c3c;}
+      .grade-btn.zero:hover,.grade-btn.zero.sel{background:#e74c3c;color:#fff;border-color:#e74c3c;}
+      .grade-num{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;width:75px;color:var(--txt);font-family:'Cairo',sans-serif;font-size:.88rem;text-align:center;outline:none;}
+      .grade-num:focus{border-color:var(--gold);}
+      .grade-save-btn{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0a1628;border:none;border-radius:9px;padding:7px 18px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:800;}
+      .search-box{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:7px 14px;margin-bottom:12px;}
+      .search-box input{background:none;border:none;outline:none;color:var(--txt);font-family:'Cairo',sans-serif;font-size:.87rem;width:100%;}
+    </style>
+    <div class="res-tabs">
+      <button class="res-tab active" id="resTab-summary" onclick="switchResTab('summary')">📋 كل الطلاب</button>
+      ${essayQ.length?`<button class="res-tab${hasPending?' pending-tab':''}" id="resTab-essay" onclick="switchResTab('essay')">✏️ تصحيح المقالي${hasPending?` <span style="background:#e74c3c;color:#fff;border-radius:20px;padding:1px 7px;font-size:.65rem;">${pendingCount}</span>`:''}  </button>`:''}
+    </div>
+    <div id="resPanel-summary"></div>
+    <div id="resPanel-essay" style="display:none;">
+      <div style="display:grid;grid-template-columns:260px 1fr;gap:16px;min-height:350px;">
+        <div>
+          <div class="search-box">🔍 <input id="essaySearchInput" placeholder="ابحث باسم الطالب..." oninput="filterEssayStudents('${id}')"></div>
+          <div id="essayStudentList" style="overflow-y:auto;max-height:420px;"></div>
+        </div>
+        <div id="essayGradeDetail" style="flex:1;">
+          <div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--txt3);font-size:.9rem;">👈 اختر طالباً من القائمة</div>
+        </div>
+      </div>
+    </div>`;
+
+  window._oeResExamId = id;
+  renderResSummary(id);
+  if(essayQ.length) renderEssayStudentList(id);
+
+  document.getElementById('modalFooter').innerHTML='<button class="btn btn-secondary" onclick="closeModal()">إغلاق</button>';
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function switchResTab(tab){
+  ['summary','essay'].forEach(t=>{
+    const btn=document.getElementById('resTab-'+t);
+    const panel=document.getElementById('resPanel-'+t);
+    if(btn) btn.classList.toggle('active',t===tab);
+    if(panel) panel.style.display=t===tab?'':'none';
+  });
+}
+
+function renderResSummary(examId){
+  const ex=(DB.onlineExams||[]).find(e=>e.id===examId); if(!ex)return;
+  const allStudents=(DB.students||[]).filter(s=>{
+    return (ex.targetType==='student'&&ex.targetId===s.id)||
+           (ex.targetType==='group'&&ex.targetId===s.groupId)||
+           (ex.targetType==='grade'&&ex.targetId===s.grade);
+  });
+  const results=(DB.onlineResults||[]).filter(r=>r.examId===examId);
+  const essayQ=(ex.questions||[]).filter(q=>q.type==='essay');
+  const autoQ=(ex.questions||[]).filter(q=>q.type!=='essay');
+  const panel=document.getElementById('resPanel-summary'); if(!panel)return;
+
+  const examedIds=new Set(results.map(r=>r.studentId));
+  // Students who took exam first (sorted by pending then done), then not-taken
+  const took=allStudents.filter(s=>examedIds.has(s.id));
+  const notTook=allStudents.filter(s=>!examedIds.has(s.id));
+  // Sort took: pending first
+  took.sort((a,b)=>{
+    const ra=results.find(r=>r.studentId===a.id);
+    const rb=results.find(r=>r.studentId===b.id);
+    return (rb?.essayPending?1:0)-(ra?.essayPending?1:0);
+  });
+
+  const colors=['#c9a227','#27ae60','#2980b9','#8e44ad','#e67e22','#e74c3c'];
+  function avatarColor(name){ const c=name?name.charCodeAt(0)%colors.length:0; return colors[c]; }
+  function initials(name){ return name?(name.trim().split(' ').slice(0,2).map(w=>w[0]).join('')):'?'; }
+
+  panel.innerHTML=`
+    <div class="search-box">🔍 <input id="summarySearch" placeholder="ابحث باسم الطالب..." oninput="filterSummary('${examId}')" style="background:none;border:none;outline:none;color:var(--txt);font-family:'Cairo',sans-serif;font-size:.87rem;width:100%;"></div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;font-size:.8rem;color:var(--txt2);flex-wrap:wrap;">
+      <span>📊 إجمالي الطلاب: <strong style="color:var(--txt)">${allStudents.length}</strong></span>
+      <span>✅ امتحنوا: <strong style="color:#27ae60">${took.length}</strong></span>
+      <span>⏳ لم يمتحنوا: <strong style="color:#e74c3c">${notTook.length}</strong></span>
+      ${essayQ.length?`<span>✏️ ينتظر تصحيح: <strong style="color:#e74c3c">${results.filter(r=>r.essayPending).length}</strong></span>`:''}
+    </div>
+    <div id="summaryList">
+    ${[...took,...notTook].map((s,i)=>{
+      const r=results.find(x=>x.studentId===s.id);
+      const done=!!r;
+      const dispScore=r?(r.finalScore!=null?r.finalScore:r.score):null;
+      const dispTotal=r?(r.finalTotal!=null?r.finalTotal:(r.total||(autoQ.length+(essayQ.reduce((a,q)=>a+(q.marks||10),0))))):null;
+      const pct=done&&dispTotal>0?Math.round((dispScore/dispTotal)*100):null;
+      const color=avatarColor(s.name);
+      let statusHTML='';
+      if(!done){
+        statusHTML=`<span class="stu-status-badge" style="background:rgba(231,76,60,.15);color:#e74c3c;">⏳ لم يمتحن</span>`;
+      } else if(r.essayPending){
+        statusHTML=`<span class="stu-status-badge" style="background:rgba(155,89,182,.15);color:#9b59b6;">✏️ ينتظر تصحيح</span>`;
+      } else {
+        statusHTML=`<span class="stu-status-badge" style="background:rgba(39,174,96,.15);color:#27ae60;">✅ مكتمل</span>`;
+      }
+      const scoreHTML=done?`<span class="stu-score-badge" style="color:${pct>=75?'#27ae60':pct>=50?'var(--gold2)':'#e74c3c'};">${dispScore}/${dispTotal} <span style="font-size:.7rem;">(${pct}%)</span></span>`:'';
+      return `<div class="stu-row" id="sumRow-${s.id}" onclick="summaryRowClick('${examId}','${s.id}','${done}')">
+        <div class="stu-avatar-sm" style="background:${color};">${initials(s.name)}</div>
+        <div class="stu-info">
+          <div class="stu-name">${s.name}</div>
+          <div class="stu-sub">${s.grade||''}${s.groupId?(DB.groups||[]).find(g=>g.id===s.groupId)?(' — '+(DB.groups||[]).find(g=>g.id===s.groupId).name):'':''}</div>
+        </div>
+        ${statusHTML}
+        ${scoreHTML}
+        ${done&&essayQ.length?`<button class="btn btn-xs ${r.essayPending?'btn-danger':'btn-secondary'}" onclick="event.stopPropagation();switchToEssayForStudent('${examId}','${s.id}')">${r.essayPending?'✏️ صحح':'🔍 راجع'}</button>`:''}
+      </div>`;
+    }).join('')}
+    </div>`;
+}
+
+function summaryRowClick(examId, studentId, done){
+  if(done==='true'||done===true) switchToEssayForStudent(examId, studentId);
+}
+
+function filterSummary(examId){
+  const q=(document.getElementById('summarySearch')?.value||'').toLowerCase();
+  document.querySelectorAll('[id^="sumRow-"]').forEach(el=>{
+    const name=el.querySelector('.stu-name')?.textContent||'';
+    el.style.display=name.toLowerCase().includes(q)?'':'none';
+  });
+}
+
+function renderEssayStudentList(examId, selectedId){
+  const ex=(DB.onlineExams||[]).find(e=>e.id===examId); if(!ex)return;
+  const allStudents=(DB.students||[]).filter(s=>{
+    return (ex.targetType==='student'&&ex.targetId===s.id)||
+           (ex.targetType==='group'&&ex.targetId===s.groupId)||
+           (ex.targetType==='grade'&&ex.targetId===s.grade);
+  });
+  const results=(DB.onlineResults||[]).filter(r=>r.examId===examId);
+  const colors=['#c9a227','#27ae60','#2980b9','#8e44ad','#e67e22','#e74c3c'];
+  function avatarColor(name){ const c=name?name.charCodeAt(0)%colors.length:0; return colors[c]; }
+  function initials(name){ return name?(name.trim().split(' ').slice(0,2).map(w=>w[0]).join('')):'?'; }
+
+  const examedIds=new Set(results.map(r=>r.studentId));
+  const took=allStudents.filter(s=>examedIds.has(s.id));
+  const notTook=allStudents.filter(s=>!examedIds.has(s.id));
+  took.sort((a,b)=>{
+    const ra=results.find(r=>r.studentId===a.id);
+    const rb=results.find(r=>r.studentId===b.id);
+    return (rb?.essayPending?1:0)-(ra?.essayPending?1:0);
+  });
+
+  const listEl=document.getElementById('essayStudentList'); if(!listEl)return;
+  listEl.innerHTML=[...took,...notTook].map(s=>{
+    const r=results.find(x=>x.studentId===s.id);
+    const done=!!r;
+    let dotColor='var(--txt3)';
+    let dotLabel='لم يمتحن';
+    if(done&&r.essayPending){dotColor='#9b59b6';dotLabel='ينتظر';}
+    else if(done&&!r.essayPending){dotColor='#27ae60';dotLabel='مكتمل';}
+    const isSel=selectedId&&selectedId===s.id;
+    return `<div class="stu-row${isSel?' selected':''}" id="essRow-${s.id}" onclick="selectEssayStudent('${examId}','${s.id}')" style="padding:9px 12px;">
+      <div class="stu-avatar-sm" style="background:${avatarColor(s.name)};width:32px;height:32px;font-size:.8rem;">${initials(s.name)}</div>
+      <div class="stu-info" style="min-width:0;">
+        <div style="font-size:.85rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.name}</div>
+        <div style="font-size:.7rem;color:${dotColor};">● ${dotLabel}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterEssayStudents(examId){
+  const q=(document.getElementById('essaySearchInput')?.value||'').toLowerCase();
+  document.querySelectorAll('[id^="essRow-"]').forEach(el=>{
+    const name=el.querySelector('div[style*="font-size:.85rem"]')?.textContent||'';
+    el.style.display=name.toLowerCase().includes(q)?'':'none';
+  });
+}
+
+function selectEssayStudent(examId, studentId){
+  // highlight selection
+  document.querySelectorAll('[id^="essRow-"]').forEach(el=>el.classList.remove('selected'));
+  const sel=document.getElementById('essRow-'+studentId);
+  if(sel) sel.classList.add('selected');
+  renderStudentEssayGrading(examId, studentId);
+}
+
+function renderStudentEssayGrading(examId, studentId){
+  const ex=(DB.onlineExams||[]).find(e=>e.id===examId); if(!ex)return;
+  const result=(DB.onlineResults||[]).find(r=>r.examId===examId&&r.studentId===studentId);
+  const s=(DB.students||[]).find(x=>x.id===studentId);
+  const essayQ=(ex.questions||[]).filter(q=>q.type==='essay');
+  const detail=document.getElementById('essayGradeDetail'); if(!detail)return;
+
+  if(!result){
+    detail.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:200px;flex-direction:column;gap:10px;color:var(--txt3);">
+      <div style="font-size:2rem;">📭</div>
+      <div>لم يؤدِ <strong style="color:var(--txt);">${s?.name||''}</strong> الامتحان بعد</div>
+    </div>`;
+    return;
+  }
+
+  const essayDets=result.details.filter(d=>d.type==='essay');
+  const allGraded=essayDets.every(d=>d.awarded!=null);
+
+  detail.innerHTML=`
+    <div class="grade-panel">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+        <div style="font-size:1rem;font-weight:900;color:var(--gold2);">👤 ${s?.name||'—'}</div>
+        <span style="font-size:.75rem;padding:3px 10px;border-radius:20px;background:${allGraded?'rgba(39,174,96,.15)':'rgba(155,89,182,.15)'};color:${allGraded?'#27ae60':'#9b59b6'};">
+          ${allGraded?'✅ تم التصحيح':'✏️ ينتظر التصحيح'}
+        </span>
+        <div style="margin-right:auto;font-size:.8rem;color:var(--txt2);">وقت التسليم: ${new Date(result.submittedAt).toLocaleString('ar-EG')}</div>
+      </div>
+      ${essayDets.map((det,di)=>{
+        const q=essayQ.find(x=>x.id===det.qid)||{};
+        const awarded=det.awarded!=null?det.awarded:'';
+        return `<div class="grade-q-block">
+          <div style="font-size:.85rem;font-weight:800;color:var(--gold2);margin-bottom:8px;">❓ السؤال ${di+1}: ${q.text||''}</div>
+          <div class="grade-answer-box">
+            <div style="font-size:.7rem;color:var(--txt3);margin-bottom:5px;">إجابة الطالب:</div>
+            <div style="color:var(--txt);">${det.answer||'<span style="color:var(--txt3);font-style:italic;">لم يكتب إجابة</span>'}</div>
+          </div>
+          ${q.model?`<div class="grade-model-box">
+            <div style="font-size:.7rem;color:#27ae60;margin-bottom:5px;">📋 نموذج الإجابة:</div>
+            <div style="color:var(--txt);">${q.model}</div>
+          </div>`:''}
+          <div class="grade-actions">
+            <span style="font-size:.82rem;color:var(--txt2);">الدرجة (من ${q.marks||10}):</span>
+            <input class="grade-num" type="number" id="essay-grade-${studentId}-${det.qid}"
+              value="${awarded}" min="0" max="${q.marks||10}" placeholder="0"
+              onkeydown="if(event.key==='Enter')saveEssayGrade('${examId}','${studentId}','${det.qid}',${q.marks||10})">
+            <button class="grade-btn full${awarded===(q.marks||10)?' sel':''}" onclick="setEssayGrade('${examId}','${studentId}','${det.qid}',${q.marks||10},${q.marks||10})">✔ صح كامل</button>
+            <button class="grade-btn zero${awarded===0?' sel':''}" onclick="setEssayGrade('${examId}','${studentId}','${det.qid}',${q.marks||10},0)">✖ خطأ</button>
+            <button class="grade-save-btn" onclick="saveEssayGrade('${examId}','${studentId}','${det.qid}',${q.marks||10})">✅ حفظ</button>
+            ${det.awarded!=null?`<span style="font-size:.8rem;color:#27ae60;">الدرجة المُعطاة: <strong>${det.awarded}/${q.marks||10}</strong></span>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function switchToEssayForStudent(examId, studentId){
+  switchResTab('essay');
+  setTimeout(()=>{
+    renderEssayStudentList(examId, studentId);
+    selectEssayStudent(examId, studentId);
+  }, 80);
+}
+
+function handleEssayGradeKey(e, examId, studentId, qid, maxMarks){
+  if(e.key==='Enter') saveEssayGrade(examId, studentId, qid, maxMarks);
+}
+
+function setEssayGrade(examId, studentId, qid, maxMarks, value){
+  const inp=document.getElementById(`essay-grade-${studentId}-${qid}`);
+  if(inp) inp.value=value;
+  saveEssayGrade(examId, studentId, qid, maxMarks);
+}
+
+function saveEssayGrade(examId, studentId, qid, maxMarks){
+  const inp=document.getElementById(`essay-grade-${studentId}-${qid}`);
+  if(!inp) return;
+  const val=parseFloat(inp.value);
+  if(isNaN(val)||val<0||val>maxMarks){showToast(`الدرجة يجب أن تكون بين 0 و ${maxMarks}`,'error');return;}
+  const result=(DB.onlineResults||[]).find(r=>r.examId===examId&&r.studentId===studentId);
+  if(!result) return;
+  const det=result.details.find(d=>d.qid===qid);
+  if(det) det.awarded=val;
+  const allEssayDets=result.details.filter(d=>d.type==='essay');
+  const allGraded=allEssayDets.every(d=>d.awarded!=null);
+  if(allGraded){
+    result.essayPending=false;
+    const ex=(DB.onlineExams||[]).find(e=>e.id===examId);
+    const s=(DB.students||[]).find(x=>x.id===studentId);
+    const essayScore=allEssayDets.reduce((a,d)=>a+Number(d.awarded),0);
+    const essayTotal=(ex?.questions||[]).filter(q=>q.type==='essay').reduce((a,q)=>a+(q.marks||10),0);
+    result.finalScore=(result.score||0)+essayScore;
+    result.finalTotal=(result.total||0)+essayTotal;
+    if(s&&ex){
+      addParentNotification(s.id,'essay_graded',
+        `✅ تم تصحيح الأسئلة المقالية في امتحان "${ex.title}" — الدرجة الكلية: ${result.finalScore}/${result.finalTotal}`);
+    }
+  }
+  saveDB();
+  showToast('تم حفظ الدرجة ✅','success');
+  // refresh
+  renderResSummary(examId);
+  renderEssayStudentList(examId, studentId);
+  renderStudentEssayGrading(examId, studentId);
+  // update pending badge
+  const allResults=(DB.onlineResults||[]).filter(r=>r.examId===examId);
+  const pending=allResults.filter(r=>r.essayPending).length;
+  const btn=document.getElementById('resTab-essay');
+  if(btn){
+    btn.innerHTML='✏️ تصحيح المقالي'+(pending?` <span style="background:#e74c3c;color:#fff;border-radius:20px;padding:1px 7px;font-size:.65rem;">${pending}</span>`:'');
+    if(pending===0) btn.classList.remove('pending-tab');
+  }
+}
+
+function gradeStudentEssay(examId, studentId){
+  switchToEssayForStudent(examId, studentId);
+}
+
+
+// ---- Online Exam Builder ----
+let _oeQuestions=[];
+function openOnlineExamBuilder(){
+  _oeQuestions=[];
+  document.getElementById('modalTitle').textContent='🖥️ إنشاء امتحان أونلاين';
+  document.getElementById('modalBox').classList.add('modal-lg');
+
+  const gradesHTML=(DB.settings.grades||[]).map(g=>`
+    <label class="oe-target-card" onclick="selectOETarget('grade:${g}',this)">
+      <div class="oe-target-icon">📚</div>
+      <div class="oe-target-info">
+        <div class="oe-target-name">${g}</div>
+        <div class="oe-target-sub">كل طلاب هذا الصف في جميع المجموعات</div>
+      </div>
+      <div class="oe-target-check">✓</div>
+    </label>`).join('');
+
+  const groupsHTML=(DB.groups||[]).length
+    ? (DB.groups||[]).map(g=>{
+        const count=(DB.students||[]).filter(s=>s.groupId===g.id).length;
+        return `<label class="oe-target-card" onclick="selectOETarget('group:${g.id}',this)">
+          <div class="oe-target-icon">👥</div>
+          <div class="oe-target-info">
+            <div class="oe-target-name">${g.name}</div>
+            <div class="oe-target-sub">${count} طالب في هذه المجموعة</div>
+          </div>
+          <div class="oe-target-check">✓</div>
+        </label>`;}).join('')
+    : '<div style="color:var(--txt3);font-size:.82rem;padding:8px;">لا توجد مجموعات</div>';
+
+  const studentsHTML=(DB.students||[]).length
+    ? (DB.students||[]).map(s=>`
+        <label class="oe-target-card" onclick="selectOETarget('student:${s.id}',this)">
+          <div class="oe-target-icon">👤</div>
+          <div class="oe-target-info">
+            <div class="oe-target-name">${s.name}</div>
+            <div class="oe-target-sub">${s.grade||'—'} ${s.groupId?(DB.groups||[]).find(g=>g.id===s.groupId)?.name?'| '+(DB.groups||[]).find(g=>g.id===s.groupId).name:'':''}</div>
+          </div>
+          <div class="oe-target-check">✓</div>
+        </label>`).join('')
+    : '<div style="color:var(--txt3);font-size:.82rem;padding:8px;">لا يوجد طلاب</div>';
+
+  document.getElementById('modalBody').innerHTML=`
+    <!-- Basic Info -->
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:18px;">
+      <div style="font-size:.85rem;font-weight:700;color:var(--gold2);margin-bottom:12px;">📋 معلومات الامتحان</div>
+      <div class="form-row" style="margin:0;">
+        <div class="form-group"><label class="form-label">عنوان الامتحان *</label><input class="form-input" id="oeTitle" placeholder="مثال: اختبار الفصل الأول"></div>
+        <div class="form-group"><label class="form-label">المادة</label><input class="form-input" id="oeSubject" placeholder="مثال: رياضيات"></div>
+        <div class="form-group"><label class="form-label">المدة (دقيقة) *</label><input class="form-input" id="oeTime" type="number" value="30" min="1"></div>
+      </div>
+    </div>
+
+    <!-- Target Selector -->
+    <input type="hidden" id="oeTarget" value="">
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:18px;">
+      <div style="font-size:.85rem;font-weight:700;color:var(--gold2);margin-bottom:14px;">🎯 التعيين لـ * <span id="oeTargetValidMsg" style="color:#e74c3c;font-size:.75rem;display:none;"> — اختر وجهة</span></div>
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:6px;margin-bottom:14px;" id="oeTargetTypeTabs">
+        <button class="oe-type-tab active" onclick="switchOETargetType('grade',this)">📚 بالصف</button>
+        <button class="oe-type-tab" onclick="switchOETargetType('group',this)">👥 بالمجموعة</button>
+        <button class="oe-type-tab" onclick="switchOETargetType('student',this)">👤 بالطالب</button>
+      </div>
+
+      <div id="oeTargetPanel-grade" class="oe-target-panel">
+        <div style="font-size:.78rem;color:var(--txt3);margin-bottom:10px;">سيظهر الامتحان لكل طلاب الصف في جميع المجموعات</div>
+        <div style="display:grid;gap:6px;">${gradesHTML}</div>
+      </div>
+      <div id="oeTargetPanel-group" class="oe-target-panel" style="display:none;">
+        <div style="font-size:.78rem;color:var(--txt3);margin-bottom:10px;">سيظهر الامتحان لطلاب هذه المجموعة فقط</div>
+        <div style="display:grid;gap:6px;">${groupsHTML}</div>
+      </div>
+      <div id="oeTargetPanel-student" class="oe-target-panel" style="display:none;">
+        <div style="font-size:.78rem;color:var(--txt3);margin-bottom:10px;">سيظهر الامتحان لهذا الطالب فقط</div>
+        <div style="display:grid;gap:6px;max-height:220px;overflow-y:auto;">${studentsHTML}</div>
+      </div>
+    </div>
+
+    <!-- Questions -->
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:4px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-weight:700;color:var(--gold2);">❓ الأسئلة</div>
+        <span style="font-size:.75rem;color:var(--txt3);" id="oeQCount">0 سؤال</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="oe-add-q-btn" onclick="addOEQuestion('mcq')">🔘 اختياري (MCQ)</button>
+        <button class="oe-add-q-btn" onclick="addOEQuestion('tf')">✅ صح أو خطأ</button>
+        <button class="oe-add-q-btn" onclick="addOEQuestion('essay')">✏️ مقالي</button>
+      </div>
+    </div>
+    <div id="oeQuestionsContainer"></div>`;
+
+  document.getElementById('modalFooter').innerHTML=`
+    <button class="btn btn-primary" onclick="saveOnlineExam()">💾 حفظ الامتحان</button>
+    <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>`;
+  document.getElementById('modalOverlay').classList.add('show');
+  addOEQuestion();
+}
+
+function switchOETargetType(type, el){
+  document.querySelectorAll('.oe-type-tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.querySelectorAll('.oe-target-panel').forEach(p=>p.style.display='none');
+  const panel=document.getElementById('oeTargetPanel-'+type);
+  if(panel) panel.style.display='';
+  // clear selection when switching tabs
+  document.getElementById('oeTarget').value='';
+  document.querySelectorAll('.oe-target-card').forEach(c=>c.classList.remove('selected'));
+}
+
+function selectOETarget(value, el){
+  document.getElementById('oeTarget').value=value;
+  // highlight selected card within same panel
+  const panel=el.closest('.oe-target-panel');
+  if(panel) panel.querySelectorAll('.oe-target-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  const msg=document.getElementById('oeTargetValidMsg');
+  if(msg) msg.style.display='none';
+}
+
+function addOEQuestion(type='mcq'){
+  const qid='q'+Date.now()+Math.random().toString(36).slice(2,6);
+  _oeQuestions.push({id:qid,type});
+  const con=document.getElementById('oeQuestionsContainer'); if(!con)return;
+  const num=con.querySelectorAll('.oe-builder-q').length+1;
+  const div=document.createElement('div');
+  div.className='oe-builder-q'; div.id='oeq-'+qid;
+  div.dataset.type=type;
+
+  const typeLabels={mcq:'🔘 اختياري',tf:'✅ صح أو خطأ',essay:'✏️ مقالي'};
+  const typeColors={mcq:'rgba(52,152,219,.2)',tf:'rgba(39,174,96,.2)',essay:'rgba(155,89,182,.2)'};
+
+  let bodyHTML='';
+  if(type==='mcq'){
+    bodyHTML=`
+      <div style="display:grid;gap:6px;" id="oqopts-${qid}">
+        ${['أ','ب','ج','د'].map((l,i)=>`
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="radio" name="correct-${qid}" value="${i}" style="accent-color:var(--gold);width:16px;height:16px;" title="الإجابة الصحيحة">
+            <input class="form-input" id="oqo${i}-${qid}" placeholder="الخيار ${l}" style="flex:1;padding:8px 12px;">
+          </div>`).join('')}
+      </div>
+      <div style="font-size:.72rem;color:var(--txt3);margin-top:6px;">🔵 انقر على الدائرة لتحديد الإجابة الصحيحة</div>`;
+  } else if(type==='tf'){
+    bodyHTML=`
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg2);cursor:pointer;">
+          <input type="radio" name="correct-${qid}" value="0" style="accent-color:#27ae60;width:16px;height:16px;">
+          <span style="font-size:.95rem;font-weight:700;color:#27ae60;">✅ صح</span>
+        </label>
+        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg2);cursor:pointer;">
+          <input type="radio" name="correct-${qid}" value="1" style="accent-color:#e74c3c;width:16px;height:16px;">
+          <span style="font-size:.95rem;font-weight:700;color:#e74c3c;">❌ خطأ</span>
+        </label>
+      </div>
+      <div style="font-size:.72rem;color:var(--txt3);margin-top:6px;">🔵 اختر الإجابة الصحيحة</div>`;
+  } else if(type==='essay'){
+    bodyHTML=`
+      <div style="background:var(--bg2);border:1px dashed var(--border);border-radius:10px;padding:12px;margin-top:4px;">
+        <div style="font-size:.8rem;color:var(--txt2);margin-bottom:8px;">📝 نموذج الإجابة (اختياري — للمراجعة فقط)</div>
+        <textarea class="form-input" id="oqmodel-${qid}" placeholder="اكتب نموذج الإجابة هنا..." style="min-height:70px;resize:vertical;width:100%;"></textarea>
+        <div style="font-size:.72rem;color:var(--txt3);margin-top:6px;">💡 الأسئلة المقالية تُصحَّح يدوياً — يمكنك إدخال الدرجة بعد المراجعة</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+          <label style="font-size:.8rem;color:var(--txt2);">الدرجة الكاملة للسؤال:</label>
+          <input class="form-input" type="number" id="oqmarks-${qid}" value="10" min="1" style="width:80px;padding:6px 10px;">
+        </div>
+      </div>`;
+  }
+
+  div.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="background:${typeColors[type]};border-radius:6px;padding:2px 10px;font-size:.75rem;font-weight:700;">${typeLabels[type]}</span>
+        <span style="font-size:.78rem;color:var(--txt3);">سؤال #${num}</span>
+      </div>
+      <button class="remove-q" style="position:static;" onclick="removeOEQuestion('${qid}')">✖</button>
+    </div>
+    <input class="form-input" id="oqt-${qid}" placeholder="نص السؤال *" style="margin-bottom:10px;">
+    ${bodyHTML}`;
+  con.appendChild(div);
+  // update count
+  const cnt=document.getElementById('oeQCount');
+  if(cnt) cnt.textContent=con.querySelectorAll('.oe-builder-q').length+' سؤال';
+}
+
+function removeOEQuestion(qid){
+  _oeQuestions=_oeQuestions.filter(q=>q.id!==qid);
+  const el=document.getElementById('oeq-'+qid);
+  if(el)el.remove();
+  const con=document.getElementById('oeQuestionsContainer');
+  const cnt=document.getElementById('oeQCount');
+  if(cnt&&con) cnt.textContent=(con.querySelectorAll('.oe-builder-q').length)+' سؤال';
+}
+
+function saveOnlineExam(){
+  const title=document.getElementById('oeTitle')?.value.trim();
+  const subject=document.getElementById('oeSubject')?.value.trim();
+  const timeLimit=parseInt(document.getElementById('oeTime')?.value)||30;
+  const targetRaw=document.getElementById('oeTarget')?.value;
+  if(!title){showToast('أدخل عنوان الامتحان','error');return;}
+  if(!targetRaw){const m=document.getElementById('oeTargetValidMsg');if(m)m.style.display='';showToast('اختر وجهة الامتحان (صف / مجموعة / طالب)','error');return;}
+  const [targetType,targetId]=targetRaw.split(':');
+
+  // collect questions
+  const questions=[];
+  const qDivs=document.querySelectorAll('.oe-builder-q');
+  let valid=true;
+  qDivs.forEach((div,idx)=>{
+    const qid=div.id.replace('oeq-','');
+    const type=div.dataset.type||'mcq';
+    const text=document.getElementById('oqt-'+qid)?.value.trim();
+    if(!text){showToast(`أدخل نص السؤال رقم ${idx+1}`,'error');valid=false;return;}
+
+    if(type==='mcq'){
+      const options=[0,1,2,3].map(i=>document.getElementById(`oqo${i}-${qid}`)?.value.trim()||'');
+      const correctEl=div.querySelector(`input[name="correct-${qid}"]:checked`);
+      if(options.some(o=>!o)){showToast(`أدخل كل خيارات السؤال رقم ${idx+1}`,'error');valid=false;return;}
+      if(!correctEl){showToast(`حدد الإجابة الصحيحة للسؤال رقم ${idx+1}`,'error');valid=false;return;}
+      questions.push({id:qid,type,text,options,correct:parseInt(correctEl.value)});
+    } else if(type==='tf'){
+      const correctEl=div.querySelector(`input[name="correct-${qid}"]:checked`);
+      if(!correctEl){showToast(`حدد الإجابة الصحيحة للسؤال رقم ${idx+1}`,'error');valid=false;return;}
+      questions.push({id:qid,type,text,options:['صح','خطأ'],correct:parseInt(correctEl.value)});
+    } else if(type==='essay'){
+      const model=document.getElementById('oqmodel-'+qid)?.value.trim()||'';
+      const marks=parseInt(document.getElementById('oqmarks-'+qid)?.value)||10;
+      questions.push({id:qid,type,text,model,marks});
+    }
+  });
+  if(!valid||!questions.length){if(!questions.length)showToast('أضف سؤالاً واحداً على الأقل','error');return;}
+
+  const exam={
+    id:uid(),title,subject,timeLimit,targetType,targetId,questions,
+    createdAt:new Date().toISOString(),createdBy:currentUser?.name
+  };
+  DB.onlineExams=DB.onlineExams||[];
+  DB.onlineExams.push(exam);
+
+  // notify students
+  const studentsToNotify=targetType==='grade'
+    ?(DB.students||[]).filter(s=>s.grade===targetId)
+    :targetType==='group'
+      ?(DB.students||[]).filter(s=>s.groupId===targetId)
+      :[(DB.students||[]).find(s=>s.id===targetId)].filter(Boolean);
+
+  studentsToNotify.forEach(s=>{
+    addParentNotification(s.id,'online_exam',
+      `📢 تم إضافة امتحان أونلاين جديد: "${title}" — المادة: ${subject||'—'} — المدة: ${timeLimit} دقيقة`);
+  });
+
+  saveDB(); closeModal();
+  switchExamSubTab('online', document.getElementById('examSubTab-online'));
+  showToast('تم إنشاء الامتحان الأونلاين ✅','success');
+  logActivity('امتحان أونلاين جديد', title);
+}
+
+// ---- PARENT PORTAL: Online Exams Tab ----
+function renderParentOnlineExams(){
+  const div=document.getElementById('parentContent'); if(!div)return;
+  const student=window._parentStudent; if(!student){div.innerHTML='';return;}
+  const allExams=DB.onlineExams||[];
+  // exams assigned to this student or their group
+  const myExams=allExams.filter(e=>
+    (e.targetType==='student' && e.targetId===student.id)||
+    (e.targetType==='group'   && e.targetId===student.groupId)||
+    (e.targetType==='grade'   && e.targetId===student.grade)
+  );
+  const results=DB.onlineResults||[];
+
+  if(!myExams.length){
+    div.innerHTML=`<div class="empty-state"><div class="empty-icon">🖥️</div><div class="empty-txt">لا يوجد امتحانات أونلاين حالياً</div></div>`;
+    return;
+  }
+
+  div.innerHTML=`
+  <div style="max-width:680px;margin:0 auto;">
+    <div style="font-size:1.1rem;font-weight:900;color:var(--gold2);margin-bottom:16px;">🖥️ امتحاناتي الأونلاين</div>
+    <div style="display:grid;gap:12px;">
+    ${myExams.map(ex=>{
+      const res=results.find(r=>r.examId===ex.id&&r.studentId===student.id);
+      const total=(ex.questions||[]).length;
+      const done=!!res;
+      // استخدم الدرجة النهائية (بعد تصحيح المقالي لو وُجد)
+      const dispScore=res?(res.finalScore!=null?res.finalScore:res.score):0;
+      const dispTotal=res?(res.finalTotal!=null?res.finalTotal:res.total||total):total;
+      const pct=done&&dispTotal>0?Math.round((dispScore/dispTotal)*100):0;
+      const isPending=res&&res.essayPending;
+      return `<div class="oe-card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div style="flex:1;">
+            <div style="font-size:1rem;font-weight:900;color:var(--gold2);">🖥️ ${ex.title}</div>
+            <div style="font-size:.82rem;color:var(--txt2);margin-top:4px;">
+              📚 ${ex.subject||'—'} &nbsp;|&nbsp; ⏱️ ${ex.timeLimit} دقيقة &nbsp;|&nbsp; ❓ ${total} سؤال
+            </div>
+            ${done?`
+            <div style="margin-top:10px;padding:10px;background:var(--bg3);border-radius:10px;border:1px solid ${isPending?'rgba(155,89,182,.4)':'var(--border)'};">
+              <div style="font-size:.78rem;color:var(--txt3);margin-bottom:4px;">${isPending?'⏳ في انتظار تصحيح الأسئلة المقالية':'✅ تم الانتهاء من الامتحان وظهرت النتيجة'}</div>
+              <div style="font-size:1.2rem;font-weight:900;color:${pct>=75?'#27ae60':pct>=50?'var(--gold2)':'#e74c3c'};">
+                ${dispScore}/${dispTotal} &nbsp;(${isPending?'جزئية ':''  }${pct}%)
+              </div>
+              <div style="margin-top:4px;">${isPending?'<span style="color:#9b59b6;font-size:.8rem;">✏️ الدرجة الكلية ستظهر بعد تصحيح المقالي</span>':evalScore(dispScore,dispTotal)}</div>
+              <div style="font-size:.75rem;color:var(--txt3);margin-top:4px;">
+                وقت التسليم: ${new Date(res.submittedAt).toLocaleString('ar-EG')}
+              </div>
+            </div>`:''}
+          </div>
+          <div>
+            ${!done
+              ?`<button class="btn btn-primary" onclick="startOnlineExam('${ex.id}','${student.id}')">▶️ ابدأ الامتحان</button>`
+              :`<button class="btn btn-secondary" onclick="reviewOnlineExam('${ex.id}','${student.id}')">🔍 مراجعة الإجابات</button>`
+            }
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+    </div>
+  </div>`;
+}
+
+// ---- Exam taking interface ----
+let _oeTimer=null;
+let _oeAnswers={};
+let _oeAutoSave=null;
+
+function startOnlineExam(examId, studentId){
+  const ex=(DB.onlineExams||[]).find(e=>e.id===examId); if(!ex)return;
+  const already=(DB.onlineResults||[]).find(r=>r.examId===examId&&r.studentId===studentId);
+  if(already){showToast('لقد أديت هذا الامتحان من قبل','warning');return;}
+  _oeAnswers={};
+  const div=document.getElementById('parentContent'); if(!div)return;
+  const total=(ex.questions||[]).length;
+  let timeLeft=ex.timeLimit*60;
+
+  function renderExamUI(){
+    div.innerHTML=`
+    <div style="max-width:680px;margin:0 auto;" id="oeExamWrapper">
+      <!-- header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="font-size:1rem;font-weight:900;color:var(--gold2);">🖥️ ${ex.title}</div>
+          <div style="font-size:.8rem;color:var(--txt2);">📚 ${ex.subject||'—'} &nbsp;|&nbsp; ❓ ${total} سؤال</div>
+        </div>
+        <div class="oe-timer" id="oeTimerDisplay">${formatTime(timeLeft)}</div>
+      </div>
+      <!-- progress -->
+      <div class="oe-progress"><div class="oe-progress-bar" id="oeProgressBar" style="width:0%"></div></div>
+      <!-- questions -->
+      <div id="oeQList">
+      ${ex.questions.map((q,qi)=>{
+        const typeBadge=q.type==='tf'?'<span style="background:rgba(39,174,96,.2);color:#27ae60;border-radius:6px;padding:1px 8px;font-size:.72rem;margin-right:6px;">✅ صح أو خطأ</span>'
+          :q.type==='essay'?'<span style="background:rgba(155,89,182,.2);color:#9b59b6;border-radius:6px;padding:1px 8px;font-size:.72rem;margin-right:6px;">✏️ مقالي</span>'
+          :'<span style="background:rgba(52,152,219,.2);color:#3498db;border-radius:6px;padding:1px 8px;font-size:.72rem;margin-right:6px;">🔘 اختياري</span>';
+        let answersHTML='';
+        if(q.type==='essay'){
+          answersHTML=`<textarea class="form-input" id="oessay-${q.id}" placeholder="اكتب إجابتك هنا..." style="min-height:100px;resize:vertical;width:100%;" oninput="selectOEAnswer('${q.id}',this.value,'${examId}')"></textarea>
+          ${q.marks?`<div style="font-size:.75rem;color:var(--txt3);margin-top:4px;">الدرجة الكاملة: ${q.marks} درجة</div>`:''}`;
+        } else {
+          const labels=q.type==='tf'?['✅ صح','❌ خطأ']:['أ','ب','ج','د'].map((l,i)=>l+'. '+(q.options[i]||''));
+          answersHTML=(q.options||[]).map((opt,oi)=>`
+            <div class="oe-option" id="oeopt-${q.id}-${oi}" onclick="selectOEAnswer('${q.id}',${oi},'${examId}')">
+              <input type="radio" name="oeq-${q.id}" value="${oi}" id="oerad-${q.id}-${oi}">
+              <label for="oerad-${q.id}-${oi}" style="cursor:pointer;flex:1;">${q.type==='tf'?opt:['أ','ب','ج','د'][oi]+'. '+opt}</label>
+            </div>`).join('');
+        }
+        return `<div class="oe-question" id="oeqblock-${q.id}">
+          <div class="oe-question-num">${typeBadge}سؤال ${qi+1} من ${total}</div>
+          <div class="oe-question-text">${q.text}</div>
+          ${answersHTML}
+        </div>`;
+      }).join('')}
+      </div>
+      <!-- submit -->
+      <div style="text-align:center;margin-top:20px;padding-bottom:30px;">
+        <button class="btn btn-primary" style="padding:14px 40px;font-size:1rem;" onclick="submitOnlineExam('${examId}','${studentId}')">
+          ✅ تسليم الامتحان
+        </button>
+      </div>
+    </div>`;
+    restoreOEAnswers(examId);
+  }
+
+  renderExamUI();
+
+  // start timer
+  if(_oeTimer)clearInterval(_oeTimer);
+  _oeTimer=setInterval(()=>{
+    timeLeft--;
+    const el=document.getElementById('oeTimerDisplay');
+    if(el){el.textContent=formatTime(timeLeft); if(timeLeft<=60)el.classList.add('danger');}
+    updateOEProgress(examId,total);
+    if(timeLeft<=0){clearInterval(_oeTimer);showToast('انتهى الوقت! سيتم التسليم تلقائياً','warning');submitOnlineExam(examId,studentId,true);}
+  },1000);
+
+  // auto-save every 10s
+  if(_oeAutoSave)clearInterval(_oeAutoSave);
+  _oeAutoSave=setInterval(()=>autoSaveOEAnswers(examId),10000);
+
+  // anti-cheat
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden) showToast('⚠️ تحذير: لا تغادر الصفحة أثناء الامتحان!','warning');
+  });
+  document.addEventListener('copy',e=>e.preventDefault());
+  document.addEventListener('paste',e=>e.preventDefault());
+  document.addEventListener('contextmenu',e=>e.preventDefault());
+}
+
+function formatTime(s){
+  const m=Math.floor(s/60); const ss=s%60;
+  return String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+}
+
+function selectOEAnswer(qid, optIdx, examId){
+  _oeAnswers[qid]=optIdx;
+  // update UI for MCQ / TF
+  if(typeof optIdx==='number'){
+    document.querySelectorAll(`[id^="oeopt-${qid}-"]`).forEach(el=>el.classList.remove('selected'));
+    const opt=document.getElementById(`oeopt-${qid}-${optIdx}`);
+    if(opt)opt.classList.add('selected');
+    const radio=document.getElementById(`oerad-${qid}-${optIdx}`);
+    if(radio)radio.checked=true;
+  }
+  // mark question answered
+  const block=document.getElementById('oeqblock-'+qid);
+  if(block)block.style.borderColor='var(--gold)';
+  updateOEProgress(examId, Object.keys(_oeAnswers).length);
+}
+
+function updateOEProgress(examId,answered){
+  const ex=(DB.onlineExams||[]).find(e=>e.id===examId); if(!ex)return;
+  const total=(ex.questions||[]).length;
+  const pct=Math.round((Object.keys(_oeAnswers).length/total)*100);
+  const bar=document.getElementById('oeProgressBar');
+  if(bar)bar.style.width=pct+'%';
+}
+
+function autoSaveOEAnswers(examId){
+  try{ localStorage.setItem('oe_draft_'+examId, JSON.stringify(_oeAnswers)); } catch(e){}
+}
+
+function restoreOEAnswers(examId){
+  try{
+    const saved=localStorage.getItem('oe_draft_'+examId);
+    if(saved){ const ans=JSON.parse(saved); Object.entries(ans).forEach(([qid,oi])=>selectOEAnswer(qid,oi,examId)); }
+  }catch(e){}
+}
+
+function submitOnlineExam(examId, studentId, auto=false){
+  if(!auto && !confirm('هل أنت متأكد من تسليم الامتحان؟')) return;
+  if(_oeTimer){clearInterval(_oeTimer);_oeTimer=null;}
+  if(_oeAutoSave){clearInterval(_oeAutoSave);_oeAutoSave=null;}
+  try{localStorage.removeItem('oe_draft_'+examId);}catch(e){}
+
+  const ex=(DB.onlineExams||[]).find(e=>e.id===examId); if(!ex)return;
+  const questions=ex.questions||[];
+  let score=0;
+  // total = non-essay questions only (auto-corrected)
+  const autoQ=questions.filter(q=>q.type!=='essay');
+  const essayQ=questions.filter(q=>q.type==='essay');
+  const details=questions.map(q=>{
+    if(q.type==='essay'){
+      const answer=_oeAnswers[q.id]||'';
+      return{qid:q.id,type:'essay',answer,model:q.model||'',marks:q.marks||10,awarded:null,isCorrect:null};
+    } else {
+      const chosen=_oeAnswers[q.id]??-1;
+      const isCorrect=chosen===q.correct;
+      if(isCorrect)score++;
+      return{qid:q.id,type:q.type||'mcq',chosen,correct:q.correct,isCorrect};
+    }
+  });
+
+  const essayTotal=essayQ.reduce((a,q)=>a+(q.marks||10),0);
+  const result={
+    id:uid(),examId,studentId,
+    score,total:autoQ.length,
+    essayTotal,
+    finalScore:score,
+    finalTotal:autoQ.length+essayTotal,
+    essayPending:essayQ.length>0,
+    details,submittedAt:new Date().toISOString()
+  };
+  DB.onlineResults=DB.onlineResults||[];
+  DB.onlineResults.push(result);
+
+  // notify parent
+  const s=(DB.students||[]).find(x=>x.id===studentId);
+  if(s){
+    const pct=Math.round((score/questions.length)*100);
+    addParentNotification(s.id,'online_result',
+      `✅ تم الانتهاء من الامتحان وظهرت النتيجة: "${ex.title}" — الدرجة: ${score}/${questions.length} (${pct}%)`);
+  }
+
+  saveDB();
+  showResultScreen(result, ex);
+}
+
+function showResultScreen(result, ex){
+  const div=document.getElementById('parentContent'); if(!div)return;
+  const pct=Math.round((result.score/result.total)*100);
+  const pass=pct>=50;
+  div.innerHTML=`
+  <div style="max-width:560px;margin:0 auto;text-align:center;">
+    <div class="oe-card" style="padding:30px;">
+      <div style="font-size:1.1rem;font-weight:900;color:var(--gold2);margin-bottom:20px;">✅ تم الانتهاء من الامتحان وظهرت النتيجة</div>
+      <div class="oe-result-ring ${pass?'pass':'fail'}" style="margin-bottom:20px;">
+        <div style="font-size:1.5rem;">${result.score}</div>
+        <div style="font-size:.9rem;">من ${result.total}</div>
+      </div>
+      <div style="font-size:2rem;font-weight:900;color:${pass?'#27ae60':'#e74c3c'};">${result.total>0?pct+'%':''}</div>
+      <div style="margin:8px 0 20px;">${result.total>0?evalScore(result.score,result.total):''}</div>
+      ${result.essayPending?`<div style="background:rgba(155,89,182,.15);border:1px solid rgba(155,89,182,.4);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:.82rem;color:#9b59b6;">✏️ يوجد أسئلة مقالية تحتاج تصحيحاً يدوياً — ستظهر الدرجة النهائية بعد المراجعة</div>`:''}
+      <div style="display:flex;justify-content:center;gap:20px;margin-bottom:20px;">
+        ${result.total>0?`
+        <div style="text-align:center;background:rgba(39,174,96,.1);border-radius:10px;padding:10px 20px;">
+          <div style="font-size:1.4rem;font-weight:900;color:#27ae60;">${result.details.filter(d=>d.isCorrect===true).length}</div>
+          <div style="font-size:.78rem;color:var(--txt2);">✅ صحيح</div>
+        </div>
+        <div style="text-align:center;background:rgba(192,57,43,.1);border-radius:10px;padding:10px 20px;">
+          <div style="font-size:1.4rem;font-weight:900;color:#e74c3c;">${result.details.filter(d=>d.isCorrect===false).length}</div>
+          <div style="font-size:.78rem;color:var(--txt2);">❌ خطأ</div>
+        </div>`:''}
+        ${result.essayPending?`
+        <div style="text-align:center;background:rgba(155,89,182,.1);border-radius:10px;padding:10px 20px;">
+          <div style="font-size:1.4rem;font-weight:900;color:#9b59b6;">${result.details.filter(d=>d.type==='essay').length}</div>
+          <div style="font-size:.78rem;color:var(--txt2);">✏️ مقالي</div>
+        </div>`:''}
+      </div>
+      <div style="font-size:.78rem;color:var(--txt3);margin-bottom:20px;">
+        وقت التسليم: ${new Date(result.submittedAt).toLocaleString('ar-EG')}
+      </div>
+      <button class="btn btn-secondary" style="margin-left:8px;" onclick="reviewOnlineExam('${result.examId}','${result.studentId}')">🔍 مراجعة الإجابات</button>
+      <button class="btn btn-primary" onclick="switchParentTab('onlineExams',document.querySelector('[onclick*=onlineExams]'))">↩️ رجوع</button>
+    </div>
+  </div>`;
+}
+
+function reviewOnlineExam(examId, studentId){
+  const ex=(DB.onlineExams||[]).find(e=>e.id===examId); if(!ex)return;
+  const result=(DB.onlineResults||[]).find(r=>r.examId===examId&&r.studentId===studentId);
+  if(!result){showToast('لم تؤدِ هذا الامتحان بعد','warning');return;}
+  const div=document.getElementById('parentContent'); if(!div)return;
+  const pct=result.total>0?Math.round((result.score/result.total)*100):null;
+  div.innerHTML=`
+  <div style="max-width:680px;margin:0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:1rem;font-weight:900;color:var(--gold2);">🔍 مراجعة: ${ex.title}</div>
+      <div style="font-size:1rem;font-weight:900;color:${pct>=50?'#27ae60':'#e74c3c'};">${result.score}/${result.total} (${pct}%)</div>
+    </div>
+    ${ex.questions.map((q,qi)=>{
+      const det=result.details.find(d=>d.qid===q.id)||{};
+      const typeBadge=q.type==='tf'?'<span style="background:rgba(39,174,96,.2);color:#27ae60;border-radius:6px;padding:1px 8px;font-size:.72rem;margin-left:6px;">✅ صح أو خطأ</span>'
+        :q.type==='essay'?'<span style="background:rgba(155,89,182,.2);color:#9b59b6;border-radius:6px;padding:1px 8px;font-size:.72rem;margin-left:6px;">✏️ مقالي</span>'
+        :'<span style="background:rgba(52,152,219,.2);color:#3498db;border-radius:6px;padding:1px 8px;font-size:.72rem;margin-left:6px;">🔘 اختياري</span>';
+      let ansHTML='';
+      if(q.type==='essay'){
+        const awarded=det.awarded!=null?det.awarded:'لم تُصحَّح بعد';
+        ansHTML=`
+          <div style="background:var(--bg2);border-radius:10px;padding:12px;margin-top:8px;">
+            <div style="font-size:.78rem;color:var(--txt3);margin-bottom:4px;">إجابتك:</div>
+            <div style="font-size:.9rem;color:var(--txt);line-height:1.7;">${det.answer||'<span style="color:var(--txt3);">لم تُجب</span>'}</div>
+            ${q.model?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);"><div style="font-size:.75rem;color:var(--txt3);">نموذج الإجابة:</div><div style="font-size:.85rem;color:#27ae60;margin-top:4px;">${q.model}</div></div>`:''}
+          </div>
+          <div style="margin-top:8px;font-size:.82rem;color:#9b59b6;">الدرجة: <strong>${awarded}</strong> من ${q.marks||10}</div>`;
+      } else {
+        const chosen=det.chosen??-1;
+        ansHTML=(q.options||[]).map((opt,oi)=>{
+          let cls='oe-option';
+          if(oi===q.correct) cls+=' correct';
+          else if(oi===chosen&&chosen!==q.correct) cls+=' wrong';
+          const icon=oi===q.correct?'✅':oi===chosen?'❌':'⬜';
+          const label=q.type==='tf'?opt:['أ','ب','ج','د'][oi]+'. '+opt;
+          return `<div class="${cls}">${icon} ${label}${oi===q.correct?' <span style="font-size:.73rem;color:#27ae60;">(الإجابة الصحيحة)</span>':''}</div>`;
+        }).join('');
+      }
+      return `<div class="oe-question">
+        <div class="oe-question-num">${typeBadge}سؤال ${qi+1}</div>
+        <div class="oe-question-text">${q.text}</div>
+        ${ansHTML}
+      </div>`;
+    }).join('')}
+    <div style="text-align:center;margin-top:16px;padding-bottom:30px;">
+      <button class="btn btn-primary" onclick="switchParentTab('onlineExams',document.querySelector('[onclick*=onlineExams]'))">↩️ رجوع</button>
+    </div>
+  </div>`;
 }
 
 function renderParentContact(){
