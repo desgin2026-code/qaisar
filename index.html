@@ -916,8 +916,17 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
           <option value="">-- اختر مجموعة --</option>
         </select>
         <div class="search-bar"><span>🔍</span><input type="text" id="qrSearch" placeholder="بحث باسم الطالب..." oninput="filterQR(this.value)"></div>
+        <button class="btn btn-primary" onclick="printGroupBarcodes()">🖨️ طباعة باركود المجموعة</button>
         <button class="btn btn-secondary" onclick="refreshAll()">🔄 تحديث</button>
-        <button class="btn btn-secondary" onclick="exportPDF('qrattend')">📄 PDF</button>
+      </div>
+      <!-- سكان / كتابة كود -->
+      <div style="background:linear-gradient(135deg,rgba(201,162,39,.12),rgba(41,128,185,.08));border:1px solid rgba(201,162,39,.25);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div style="font-size:1rem;font-weight:800;color:var(--gold2);">⚡ تسجيل حضور سريع</div>
+        <div style="flex:1;min-width:220px;display:flex;gap:8px;align-items:center;">
+          <input type="text" id="scanCodeInput" class="form-input" placeholder="امسح QR أو اكتب كود الطالب واضغط Enter..." style="flex:1;font-family:monospace;" onkeydown="if(event.key==='Enter')scanAttendCode()" autofocus>
+          <button class="btn btn-primary" onclick="scanAttendCode()">✅ تسجيل</button>
+        </div>
+        <div id="scanResult" style="font-size:.85rem;min-width:160px;"></div>
       </div>
       <div id="qrContent"></div>
     </div>
@@ -4090,14 +4099,16 @@ function sendAllLatePayments(month){
 function renderQR(){
   const gid=document.getElementById('qrGroupSel')?.value;
   const div=document.getElementById('qrContent');
-  if(!gid){ div.innerHTML=`<div class="empty-state"><div class="empty-icon">📱</div><div class="empty-txt">اختر مجموعة لعرض QR Codes</div></div>`; return; }
+  if(!gid){ div.innerHTML=`<div class="empty-state"><div class="empty-icon">📱</div><div class="empty-txt">اختر مجموعة لعرض الباركود</div></div>`; return; }
   const students=DB.students.filter(s=>s.groupId===gid);
+  const group=(DB.groups||[]).find(g=>g.id===gid);
   if(!students.length){ div.innerHTML=`<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-txt">لا طلاب في هذه المجموعة</div></div>`; return; }
   div.innerHTML=`
-    <div style="margin-bottom:16px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;">
-      <div style="font-size:.85rem;color:var(--txt2);">كل طالب لديه QR Code فريد. عند مسح الكود يتم تسجيل حضوره تلقائياً.</div>
+    <div style="margin-bottom:12px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-size:.85rem;color:var(--txt2);">👥 <strong style="color:var(--txt)">${group?.name||'المجموعة'}</strong> — ${students.length} طالب</span>
+      <span style="font-size:.82rem;color:var(--txt3);">امسح QR أو اكتب الكود في الحقل أعلى لتسجيل الحضور فوراً</span>
     </div>
-    <div id="qrGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;"></div>`;
+    <div id="qrGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;"></div>`;
   setTimeout(()=>{
     const grid=document.getElementById('qrGrid');
     if(!grid)return;
@@ -4106,10 +4117,19 @@ function renderQR(){
       const card=document.createElement('div');
       card.className='qr-student-card';
       card.dataset.name=s.name;
-      card.style.cssText='background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;';
-      card.innerHTML=`<div style="font-weight:700;margin-bottom:8px;font-size:.9rem;">${s.name}</div><div id="qr-${s.id}" style="display:flex;justify-content:center;margin-bottom:8px;"></div><div style="font-family:monospace;font-size:.8rem;color:var(--txt2);">${s.code}</div><div style="font-size:.75rem;color:var(--txt3);margin:4px 0;">${s.grade||''}</div><button class="btn btn-xs btn-success" style="margin-top:8px;width:100%;" onclick="registerQRAttend('${s.id}')">✅ تسجيل حضور</button>`;
+      card.dataset.code=s.code;
+      card.style.cssText='background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;transition:.2s;';
+      card.innerHTML=`
+        <div style="font-weight:800;margin-bottom:6px;font-size:.92rem;color:var(--txt);">${s.name}</div>
+        <div style="font-size:.75rem;color:var(--txt3);margin-bottom:8px;">${s.grade||''} ${s.groupId?(DB.groups||[]).find(g=>g.id===s.groupId)?' — '+((DB.groups||[]).find(g=>g.id===s.groupId)?.name||''):'':''}</div>
+        <div id="qr-${s.id}" style="display:flex;justify-content:center;margin-bottom:6px;"></div>
+        <div style="font-family:monospace;font-size:.82rem;color:var(--gold2);font-weight:700;letter-spacing:2px;margin-bottom:10px;">${s.code}</div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-xs btn-success" style="flex:1;" onclick="registerQRAttend('${s.id}')">✅ حضور</button>
+          <button class="btn btn-xs btn-secondary" style="flex:1;" onclick="printStudentBarcode('${s.id}')">🖨️ طباعة</button>
+        </div>`;
       grid.appendChild(card);
-      setTimeout(()=>{ try{ new QRCode(document.getElementById(`qr-${s.id}`),{text:s.code,width:110,height:110}); }catch(e){} },50);
+      setTimeout(()=>{ try{ new QRCode(document.getElementById(`qr-${s.id}`),{text:s.code,width:120,height:120,colorDark:'#000000',colorLight:'#ffffff'}); }catch(e){} },50);
     });
   },100);
 }
@@ -4146,6 +4166,119 @@ function filterQR(q){
     });
   },50);
 }
+// ============================================================
+// =================== SCAN ATTEND ============================
+// ============================================================
+function scanAttendCode(){
+  const input=document.getElementById('scanCodeInput');
+  const resultEl=document.getElementById('scanResult');
+  if(!input)return;
+  const code=(input.value||'').trim();
+  if(!code){ resultEl.innerHTML='<span style="color:var(--danger);">⚠️ أدخل الكود</span>'; return; }
+  const student=DB.students.find(s=>s.code===code);
+  if(!student){
+    resultEl.innerHTML=`<span style="color:var(--danger);">❌ كود غير موجود: <strong>${code}</strong></span>`;
+    input.select();
+    return;
+  }
+  // Register attendance
+  const date=today();
+  const idx=DB.attendance.findIndex(a=>a.studentId===student.id&&a.date===date);
+  if(idx>-1){
+    DB.attendance[idx].status='present';
+    resultEl.innerHTML=`<span style="color:var(--warn);">🔄 تم تحديث حضور <strong>${student.name}</strong></span>`;
+  } else {
+    DB.attendance.push({id:uid(),studentId:student.id,groupId:student.groupId,date,status:'present',method:'scan',createdBy:currentUser?.name});
+    resultEl.innerHTML=`<span style="color:var(--success);">✅ تم تسجيل حضور <strong style="color:var(--gold2);">${student.name}</strong></span>`;
+  }
+  saveDB();
+  if(student.phone) sendWAMsg(student.phone,'present',student.name,date);
+  input.value='';
+  input.focus();
+  // Highlight card if visible
+  const card=document.querySelector(`[data-code="${code}"]`);
+  if(card){ card.style.border='2px solid var(--success)'; card.style.background='rgba(39,174,96,.08)'; setTimeout(()=>{ card.style.border=''; card.style.background=''; },2000); }
+  setTimeout(()=>{ resultEl.innerHTML=''; },4000);
+}
+
+// ============================================================
+// =================== BARCODE PRINT ==========================
+// ============================================================
+function printStudentBarcode(studentId){
+  const s=DB.students.find(x=>x.id===studentId); if(!s)return;
+  const group=(DB.groups||[]).find(g=>g.id===s.groupId);
+  const center=DB.settings?.centerName||'سنتر القيصر';
+  const win=window.open('','_blank','width=420,height=340');
+  win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Arial',sans-serif;background:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;}
+    .card{border:2px solid #000;border-radius:8px;padding:14px 18px;width:340px;text-align:center;background:#fff;}
+    .center{font-size:11px;color:#555;margin-bottom:4px;}
+    .name{font-size:16px;font-weight:900;color:#000;margin:4px 0;}
+    .info{font-size:11px;color:#444;margin:2px 0;}
+    .code{font-size:13px;font-weight:700;letter-spacing:3px;color:#000;margin:6px 0;}
+    #barcodeDiv{display:flex;justify-content:center;margin:8px 0;}
+    @media print{body{margin:0;}@page{margin:5mm;}}
+  </style></head><body>
+  <div class="card">
+    <div class="center">${center}</div>
+    <div class="name">${s.name}</div>
+    <div class="info">${s.grade||''} ${group?' — '+group.name:''}</div>
+    <div id="barcodeDiv"></div>
+    <div class="code">${s.code}</div>
+  </div>
+  <script>
+    new QRCode(document.getElementById('barcodeDiv'),{text:'${s.code}',width:130,height:130,colorDark:'#000000',colorLight:'#ffffff'});
+    setTimeout(()=>window.print(),500);
+  <\/script></body></html>`);
+  win.document.close();
+}
+
+function printGroupBarcodes(){
+  const gid=document.getElementById('qrGroupSel')?.value;
+  if(!gid){ showToast('اختر مجموعة أولاً','warning'); return; }
+  const students=DB.students.filter(s=>s.groupId===gid);
+  if(!students.length){ showToast('لا طلاب في هذه المجموعة','warning'); return; }
+  const group=(DB.groups||[]).find(g=>g.id===gid);
+  const center=DB.settings?.centerName||'سنتر القيصر';
+  const cardsHTML=students.map(s=>`
+    <div class="card">
+      <div class="center">${center}</div>
+      <div class="name">${s.name}</div>
+      <div class="info">${s.grade||''} ${group?' — '+group.name:''}</div>
+      <div id="qrp-${s.id}" class="qrdiv"></div>
+      <div class="code">${s.code}</div>
+    </div>`).join('');
+  const win=window.open('','_blank','width=900,height=700');
+  win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Arial',sans-serif;background:#f5f5f5;padding:10px;}
+    h2{text-align:center;font-size:16px;margin-bottom:14px;color:#333;}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+    .card{border:2px solid #000;border-radius:6px;padding:10px 12px;background:#fff;text-align:center;break-inside:avoid;}
+    .center{font-size:9px;color:#666;margin-bottom:2px;}
+    .name{font-size:13px;font-weight:900;color:#000;margin:2px 0;}
+    .info{font-size:9px;color:#444;margin:1px 0;}
+    .code{font-size:11px;font-weight:700;letter-spacing:2px;color:#000;margin:4px 0;}
+    .qrdiv{display:flex;justify-content:center;margin:4px 0;}
+    @media print{body{background:#fff;padding:0;}@page{margin:8mm;size:A4;}h2{margin-bottom:10px;}}
+  </style></head><body>
+  <h2>📱 باركود الحضور — ${group?.name||'المجموعة'} (${students.length} طالب)</h2>
+  <div class="grid">${cardsHTML}</div>
+  <script>
+    const codes=${JSON.stringify(students.map(s=>({id:s.id,code:s.code})))};
+    codes.forEach(s=>{
+      try{ new QRCode(document.getElementById('qrp-'+s.id),{text:s.code,width:90,height:90,colorDark:'#000000',colorLight:'#ffffff'}); }catch(e){}
+    });
+    setTimeout(()=>window.print(),800);
+  <\/script></body></html>`);
+  win.document.close();
+}
+
 // ============================================================
 // =================== VIDEOS =================================
 // ============================================================
