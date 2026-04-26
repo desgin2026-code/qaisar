@@ -8571,13 +8571,8 @@ function createParentAccount(studentId){
       <button class="btn btn-success" onclick="sendParentCredentialsWA('${studentId}','${email}','${pass}')">📲 إرسال على واتساب</button>
       <button class="btn btn-secondary" onclick="closeModal()">إغلاق</button>`;
   };
-  if(!fbAuth){ saveAndNotify(); showToast('✅ تم الحفظ','success'); return; }
-  fbAuth.createUserWithEmailAndPassword(email,pass)
-    .then(()=>saveAndNotify())
-    .catch(e=>{
-      if(e.code==='auth/email-already-in-use'||e.code==='auth/network-request-failed') saveAndNotify();
-      else showToast('خطأ: '+e.message,'error');
-    });
+  saveAndNotify();
+  showToast('✅ تم الحفظ','success');
 }
 
 function sendParentCredentialsWA(studentId, email, pass){
