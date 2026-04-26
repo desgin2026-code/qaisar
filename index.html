@@ -7055,64 +7055,44 @@ function showParentLogin(){
   const pp=document.getElementById('parentSplash');
   pp.style.display='flex';
   const btn=document.getElementById('parentLoginBtn');
-
-  // تحميل البيانات من Firebase أولاً قبل السماح بالدخول
   if(btn){ btn.disabled=true; btn.textContent='⏳ جاري تحميل البيانات...'; }
 
   function enableBtn(){
-    if(btn){ btn.disabled=false; btn.textContent='🔐 دخول'; }
+    if(btn){ btn.disabled=false; btn.textContent='\uD83D\uDD10 دخول'; }
     setTimeout(()=>document.getElementById('parentEmail')?.focus(),100);
   }
 
-  // لو Firebase متصل بالفعل وعنده بيانات — فعّل الزرار فوراً
-  if(fbDB && DB.students && DB.students.length > 0){
-    enableBtn(); return;
-  }
-
-  // جيب البيانات من Firebase
   function fetchFromFirebase(){
-    if(typeof firebase === 'undefined' || !fbApp){
-      // Firebase مش محمّل — حاول تانى بعد ثانية
-      setTimeout(fetchFromFirebase, 1000);
-      return;
-    }
     try{
-      if(!fbDB){ fbDB = firebase.firestore(fbApp); }
+      if(!fbApp){
+        if(!firebase.apps.length){ fbApp=firebase.initializeApp(FIREBASE_CONFIG); }
+        else { fbApp=firebase.app(); }
+      }
+      if(!fbDB){ fbDB=firebase.firestore(fbApp); }
       if(!fbAuth){ try{ fbAuth=firebase.auth(fbApp); fbAuth.signInAnonymously().catch(()=>{}); }catch(e){} }
       fbDB.collection('centers').doc('qaisar_main').get()
         .then(doc=>{
           if(doc.exists){
             const data=doc.data();
             if(data && data.db){
-              try{
-                const remoteDB=JSON.parse(data.db);
-                DB=remoteDB;
-                localStorage.setItem(STORE_KEY, JSON.stringify(DB));
-              }catch(e){}
+              try{ DB=JSON.parse(data.db); localStorage.setItem(STORE_KEY,JSON.stringify(DB)); }catch(e){}
             }
           }
           enableBtn();
         })
-        .catch(e=>{
-          console.warn('Firebase fetch error:',e);
-          enableBtn(); // خليه يحاول بالبيانات المحلية
-        });
-    }catch(e){
-      console.warn('Firebase init error:',e);
-      enableBtn();
-    }
+        .catch(e=>{ console.warn('Firebase fetch error:',e); enableBtn(); });
+    }catch(e){ console.warn('Firebase init error:',e); enableBtn(); }
   }
 
-  // انتظر Firebase SDK يتحمل (max 8 ثواني)
   let waited=0;
-  const waitFirebase=setInterval(()=>{
+  const waitSDK=setInterval(()=>{
     waited+=500;
-    if(typeof firebase !== 'undefined'){
-      clearInterval(waitFirebase);
+    if(typeof firebase!=='undefined'){
+      clearInterval(waitSDK);
       fetchFromFirebase();
-    } else if(waited>=8000){
-      clearInterval(waitFirebase);
-      enableBtn(); // timeout — خليه يحاول بالبيانات المحلية
+    } else if(waited>=10000){
+      clearInterval(waitSDK);
+      enableBtn();
     }
   },500);
 }
