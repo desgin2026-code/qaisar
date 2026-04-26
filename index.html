@@ -8582,7 +8582,7 @@ function sendParentCredentialsWA(studentId, email, pass){
   const account=(DB.parentAccounts||[]).find(p=>p.studentId===studentId);
   const finalPass=pass&&pass!=='••••••'?pass:(account?.password||'');
   const center=DB.settings.centerName||'سنتر القيصر';
-  const siteUrl='desgin2026-code.github.io/qaisar';
+  const siteUrl='qaisar-center.netlify.app';
   const msg=`السلام عليكم 🌟\n\n*${center}*\n*مستر أحمد حسـن — مدرس التاريخ والجغرافيا* 📚\n\nتم إنشاء حسابك على بوابة أولياء الأمور لمتابعة ابنك *${s.name}* 👨‍👩‍👦\n\n🔗 *رابط البرنامج:*\nhttps://${siteUrl}\n\n━━━━━━━━━━━━━━━━\n*بيانات الدخول:*\n👤 *اسم الطالب (للدخول):*\n${s.name}\n\n🔑 *كلمة المرور:*\n${finalPass||'(كلمة المرور التي تم تحديدها)'}\n\n━━━━━━━━━━━━━━━━\n*خطوات الدخول:*\n١. افتح الرابط\n٢. اضغط "دخول ولي الأمر"\n٣. أدخل *اسم الطالب* كما هو مكتوب بالظبط\n٤. أدخل *كلمة المرور*\n٥. اضغط دخول ✅\n\n━━━━━━━━━━━━━━━━\n🔔 *مهم جداً — تفعيل الإشعارات:*\nبعد الدخول هيظهر لك سؤال\n"هل تسمح بالإشعارات؟"\n👈 اضغط *السماح / Allow*\n\nبعدها هتوصلك إشعارات فورية على تليفونك لما:\n✅ ابنك يحضر أو يغيب\n💰 يتسجل دفعة\n🎬 ينزل فيديو تعليمي جديد\n\nزي بالظبط إشعارات الواتساب 📲\n\n━━━━━━━━━━━━━━━━\n*من خلال حسابك تقدر تتابع:*\n✅ الحضور والغياب بالتاريخ\n📝 نتائج الامتحانات\n💰 حالة المدفوعات\n📅 الجدول الدراسي\n🎬 الفيديوهات التعليمية\n\nللمساعدة تواصل معنا 🙏`;
   const clean=phone.replace(/\D/g,'');
   let waPhone=clean.startsWith('20')?clean:clean.startsWith('0')?'2'+clean:'20'+clean;
@@ -8678,7 +8678,7 @@ function sendPushToParent(title, message, studentId, targetGrade, targetGroupId)
       app_id: '9f33f90a-b85e-4fb5-8d9a-bf8a246a0979',
       headings: { ar: title, en: title },
       contents: { ar: message, en: message },
-      url: 'https://desgin2026-code.github.io/qaisar',
+      url: 'https://qaisar-center.netlify.app',
     };
 
     // لو في فلتر محدد استخدمه — لو مفيش ابعت للكل
