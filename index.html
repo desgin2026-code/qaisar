@@ -487,7 +487,10 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
     </div>
     <div class="form-group">
       <label class="form-label">كلمة المرور</label>
-      <input type="password" id="loginPass" class="form-input" placeholder="أدخل كلمة المرور" autocomplete="current-password">
+      <div style="position:relative;display:flex;align-items:center;">
+        <input type="password" id="loginPass" class="form-input" placeholder="أدخل كلمة المرور" autocomplete="current-password" style="padding-left:44px;width:100%;box-sizing:border-box;">
+        <button type="button" onclick="(function(){var i=document.getElementById('loginPass');var b=document.getElementById('toggleLoginPass');if(i.type==='password'){i.type='text';b.textContent='🙈';}else{i.type='password';b.textContent='👁️';}})()" id="toggleLoginPass" style="position:absolute;left:10px;background:none;border:none;cursor:pointer;font-size:1.2rem;padding:0;line-height:1;">👁️</button>
+      </div>
     </div>
     <button class="btn-login" onclick="doLogin()">🔐 دخول</button>
     <div class="login-err" id="loginErr">❌ اسم المستخدم أو كلمة المرور غلط</div>
@@ -528,7 +531,10 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
     </div>
     <div class="form-group">
       <label class="form-label">كلمة المرور <span style="font-size:.75rem;color:var(--gold2);">*</span></label>
-      <input type="password" id="parentPass" class="form-input" placeholder="أدخل كلمة المرور" autocomplete="current-password" onkeydown="if(event.key==='Enter')doParentLogin()">
+      <div style="position:relative;display:flex;align-items:center;">
+        <input type="password" id="parentPass" class="form-input" placeholder="أدخل كلمة المرور" autocomplete="current-password" onkeydown="if(event.key==='Enter')doParentLogin()" style="padding-left:44px;width:100%;box-sizing:border-box;">
+        <button type="button" onclick="(function(){var i=document.getElementById('parentPass');var b=document.getElementById('toggleParentPass');if(i.type==='password'){i.type='text';b.textContent='🙈';}else{i.type='password';b.textContent='👁️';}})()" id="toggleParentPass" style="position:absolute;left:10px;background:none;border:none;cursor:pointer;font-size:1.2rem;padding:0;line-height:1;">👁️</button>
+      </div>
     </div>
     <button class="btn-login" id="parentLoginBtn" onclick="doParentLogin()">🔐 دخول</button>
     <div class="login-err" id="parentLoginErr">❌ اسم الطالب أو كلمة المرور غلط</div>
