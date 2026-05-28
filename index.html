@@ -4898,7 +4898,34 @@ function deleteUser(id){
 // ============================================================
 function renderSettings(){
   const s=DB.settings;
+  // Load form status from Firebase for display
+  const formStatusHtml = `
+    <div id="enrollFormStatus" style="display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.2);border-radius:10px;padding:10px 14px;margin-top:12px;font-size:.82rem;">
+      <span id="enrollStatusDot" style="width:10px;height:10px;border-radius:50%;background:var(--txt3);flex-shrink:0;"></span>
+      <span id="enrollStatusTxt" style="color:var(--txt2);">جاري التحقق من حالة الفورم...</span>
+    </div>`;
   document.getElementById('settingsContent').innerHTML=`
+
+    <!-- ===== التحكم في فورم التسجيل ===== -->
+    <div style="background:linear-gradient(135deg,rgba(41,128,185,.12),rgba(41,128,185,.04));border:2px solid rgba(41,128,185,.35);border-radius:16px;padding:20px;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+        <div style="font-size:2rem;">📋</div>
+        <div>
+          <div style="font-size:1.05rem;font-weight:700;color:var(--info);">فورم تسجيل أولياء الأمور</div>
+          <div style="font-size:.8rem;color:var(--txt2);margin-top:2px;">تحكم في فتح وإغلاق فورم التسجيل الذاتي — عند الإغلاق لا أحد يستطيع إضافة طلاب</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <button class="btn" id="enrollOpenBtn" style="background:linear-gradient(135deg,#27ae60,#1e8449);color:#fff;padding:10px 22px;font-size:.92rem;font-weight:700;" onclick="setEnrollFormStatus(true)">
+          ✅ فتح الفورم للتسجيل
+        </button>
+        <button class="btn btn-danger" id="enrollCloseBtn" style="padding:10px 22px;font-size:.92rem;font-weight:700;" onclick="setEnrollFormStatus(false)">
+          🔒 إغلاق الفورم
+        </button>
+        <button class="btn btn-secondary" style="font-size:.82rem;" onclick="checkEnrollFormStatus()">🔄 تحديث الحالة</button>
+      </div>
+      ${formStatusHtml}
+    </div>
 
     <!-- ===== تثبيت البرنامج ===== -->
     <div style="background:linear-gradient(135deg,rgba(201,162,39,.12),rgba(201,162,39,.04));border:2px solid rgba(201,162,39,.35);border-radius:16px;padding:20px;margin-bottom:20px;">
@@ -4987,6 +5014,7 @@ function renderSettings(){
       <div id="syncPanelContent"></div>
     </div>`;
   setTimeout(renderSyncPanel, 50);
+  setTimeout(checkEnrollFormStatus, 300);
 }
 
 function saveSettings(){
@@ -4996,6 +5024,78 @@ function saveSettings(){
   DB.settings.monthlyFee=Number(document.getElementById('sMonthlyFee')?.value)||DB.settings.monthlyFee;
   DB.settings.currency=document.getElementById('sCurrency')?.value||DB.settings.currency;
   saveDB(); showToast('تم حفظ الإعدادات','success');
+}
+
+// ============================================================
+// ========= التحكم في فورم تسجيل أولياء الأمور ==============
+// ============================================================
+function setEnrollFormStatus(isOpen){
+  if(!fbDB || !fbSyncEnabled){
+    showToast('⚠️ لا يوجد اتصال Firebase — تأكد من المزامنة أولاً','error');
+    return;
+  }
+  const openBtn=document.getElementById('enrollOpenBtn');
+  const closeBtn=document.getElementById('enrollCloseBtn');
+  if(openBtn) openBtn.disabled=true;
+  if(closeBtn) closeBtn.disabled=true;
+
+  fbDB.collection('form_control').doc('enrollment').set({
+    isOpen: isOpen,
+    updatedAt: Date.now(),
+    updatedBy: currentUser?.name || 'admin'
+  }).then(()=>{
+    showToast(isOpen ? '✅ تم فتح الفورم — أولياء الأمور يقدروا يسجلوا الآن' : '🔒 تم إغلاق الفورم — لا أحد يقدر يسجل', isOpen?'success':'warning');
+    logActivity(isOpen?'فتح فورم التسجيل':'إغلاق فورم التسجيل','');
+    checkEnrollFormStatus();
+  }).catch(e=>{
+    showToast('❌ حدث خطأ: '+e.message,'error');
+    if(openBtn) openBtn.disabled=false;
+    if(closeBtn) closeBtn.disabled=false;
+  });
+}
+
+function checkEnrollFormStatus(){
+  const dot=document.getElementById('enrollStatusDot');
+  const txt=document.getElementById('enrollStatusTxt');
+  const openBtn=document.getElementById('enrollOpenBtn');
+  const closeBtn=document.getElementById('enrollCloseBtn');
+  if(!dot||!txt) return;
+
+  if(!fbDB){
+    dot.style.background='var(--warn)';
+    txt.textContent='⚠️ Firebase غير متصل — لا يمكن التحقق';
+    return;
+  }
+
+  txt.textContent='جاري التحقق...';
+  dot.style.background='var(--txt3)';
+
+  fbDB.collection('form_control').doc('enrollment').get()
+    .then(doc=>{
+      if(!doc.exists){
+        dot.style.background='var(--warn)';
+        txt.innerHTML='⚪ الفورم لم يُضبط بعد — اضغط <strong style="color:var(--success)">فتح</strong> أو <strong style="color:var(--danger)">إغلاق</strong>';
+        if(openBtn) openBtn.disabled=false;
+        if(closeBtn) closeBtn.disabled=false;
+        return;
+      }
+      const data=doc.data();
+      const isOpen=data.isOpen===true;
+      const when=data.updatedAt?new Date(data.updatedAt).toLocaleString('ar-EG'):'';
+      const who=data.updatedBy||'';
+
+      dot.style.background=isOpen?'var(--success)':'var(--danger)';
+      dot.style.boxShadow=isOpen?'0 0 6px var(--success)':'0 0 6px var(--danger)';
+      txt.innerHTML=`<strong style="color:${isOpen?'var(--success)':'var(--danger)'}">${isOpen?'✅ الفورم مفتوح — أولياء الأمور يقدروا يسجلوا':'🔒 الفورم مغلق — لا أحد يقدر يسجل'}</strong><span style="color:var(--txt3);margin-right:8px;font-size:.77rem;">${when?('آخر تعديل: '+when+' بواسطة '+who):''}</span>`;
+      if(openBtn){ openBtn.disabled=false; openBtn.style.opacity=isOpen?'0.5':'1'; openBtn.style.border=isOpen?'2px solid var(--success)':''; }
+      if(closeBtn){ closeBtn.disabled=false; closeBtn.style.opacity=isOpen?'1':'0.5'; }
+    })
+    .catch(e=>{
+      dot.style.background='var(--danger)';
+      txt.textContent='❌ تعذّر الاتصال بـ Firebase: '+e.code;
+      if(openBtn) openBtn.disabled=false;
+      if(closeBtn) closeBtn.disabled=false;
+    });
 }
 
 function changePassword(){
