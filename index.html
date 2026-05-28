@@ -4925,6 +4925,18 @@ function renderSettings(){
         <button class="btn btn-secondary" style="font-size:.82rem;" onclick="checkEnrollFormStatus()">🔄 تحديث الحالة</button>
       </div>
       ${formStatusHtml}
+      <div style="margin-top:14px;background:rgba(0,0,0,.25);border:1px solid rgba(41,128,185,.25);border-radius:12px;padding:14px 16px;">
+        <div style="font-size:.78rem;color:var(--txt2);margin-bottom:8px;font-weight:600;">🔗 رابط الفورم — ابعته لأولياء الأمور</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input id="enrollFormLinkInput" type="text" value="https://desgin2026-code.github.io/enrollment-form/" readonly
+            style="flex:1;background:rgba(7,17,31,.8);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--gold2);font-size:.83rem;font-family:'Cairo',sans-serif;outline:none;cursor:text;direction:ltr;text-align:left;">
+          <button class="btn btn-info" style="white-space:nowrap;font-size:.82rem;padding:9px 16px;flex-shrink:0;" onclick="
+            const inp = document.getElementById('enrollFormLinkInput');
+            inp.select(); inp.setSelectionRange(0,999);
+            navigator.clipboard.writeText(inp.value).then(()=>showToast('✅ تم نسخ الرابط','success')).catch(()=>{document.execCommand('copy');showToast('✅ تم نسخ الرابط','success');});
+          ">📋 نسخ الرابط</button>
+        </div>
+      </div>
     </div>
 
     <!-- ===== تثبيت البرنامج ===== -->
