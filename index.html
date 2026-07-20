@@ -67,12 +67,12 @@
 <link rel="manifest" id="pwaManifest">
 <link rel="apple-touch-icon" id="appleIcon" href="">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 <!-- Firebase - loaded with fallback -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js" defer></script>
 <style>
 :root{
   --bg:#07111f;--bg2:#0e1f35;--bg3:#162a45;--sidebar:#050d1a;
@@ -1117,6 +1117,7 @@ let fbDB = null;
 let fbUnsubscribe = null;
 let fbSyncEnabled = false;
 let fbLastPush = 0;
+let fbInitialSyncDone = false; // ما نسمحش بالرفع (push) إلا بعد ما نستقبل/نتأكد من آخر نسخة من السحابة أول مرة، عشان نحمي البيانات من الكتابة فوقها بالغلط
 
 function initFirebase(){
   if(typeof firebase === 'undefined'){
@@ -1160,6 +1161,7 @@ function startFirebaseListener(){
   if(fbUnsubscribe) fbUnsubscribe();
   fbUnsubscribe = fbDB.collection('centers').doc('qaisar_main')
     .onSnapshot(doc => {
+      fbInitialSyncDone = true; // وصلنا أول رد فعلي من Firebase (سواء فيه بيانات أو لأ) — دلوقتي مسموح بالرفع
       if(!doc.exists) return;
       const data = doc.data();
       if(!data || !data.db) return;
@@ -1195,6 +1197,11 @@ function startFirebaseListener(){
 
 function pushToFirebase(){
   if(!fbDB || !fbSyncEnabled) return;
+  if(!fbInitialSyncDone){
+    // لسه ما استقبلناش رد من Firebase — نتجاهل الرفع دلوقتي عشان منكتبش فوق البيانات الصح بالغلط
+    showSyncIndicator('⏳ بستنى آخر نسخة من السحابة قبل الرفع...');
+    return;
+  }
   const now = Date.now();
   fbLastPush = now;
   // Split large data to avoid Firestore 1MB limit
@@ -5330,7 +5337,7 @@ function renderSyncPanel(){
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
         <button class="btn btn-primary" style="flex:1;" onclick="pushToFirebase();showToast('جاري الرفع...','info');">📤 رفع البيانات الآن</button>
         <button class="btn btn-secondary" style="flex:1;" onclick="testFirebaseConnection()">🔍 اختبار الاتصال</button>
-        <button class="btn btn-secondary" style="flex:1;" onclick="fbSyncEnabled=false;if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}fbDB=null;initFirebase();showToast('جاري إعادة الاتصال...','info');">🔄 إعادة الاتصال</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="fbSyncEnabled=false;fbInitialSyncDone=false;if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}fbDB=null;initFirebase();showToast('جاري إعادة الاتصال...','info');">🔄 إعادة الاتصال</button>
       </div>
       <div id="fbDiagBox" style="display:none;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;font-size:.78rem;margin-bottom:12px;"></div>
       <!-- Firestore Rules Fix -->
