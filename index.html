@@ -807,10 +807,11 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
     <div id="tab-profits" class="tab-pane">
       <div class="toolbar">
         <div class="toolbar-title">💹 الأرباح والإيرادات</div>
-        <input type="month" id="profitMonth" class="select-date">
-        <button class="btn btn-secondary" onclick="refreshAll()">🔄 تحديث</button>
+        <input type="month" id="profitMonth" class="select-date" onchange="renderProfits()">
+        <select class="form-select" style="width:auto;" id="profitCenter" onchange="renderProfits()"><option value="">🏢 كل السناتر</option></select>
+        <button class="btn btn-secondary" onclick="openCentersModal()">🏢 السناتر</button>
         <button class="btn btn-secondary" onclick="exportPDF('profits')">📄 PDF</button>
-        <button class="btn btn-primary" onclick="renderProfits()">🔄 احسب</button>
+        <button class="btn btn-primary" onclick="renderProfits()">🔄 تحديث</button>
       </div>
       <div id="profitsContent"></div>
     </div>
@@ -1055,6 +1056,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
       <div class="toolbar">
         <div class="toolbar-title">📒 المصروفات والإيرادات</div>
         <input type="month" id="accMonth" class="select-date" onchange="renderAccounting()">
+        <select class="form-select" style="width:auto;" id="accCenterFilter" onchange="renderAccounting()"><option value="">🏢 كل السناتر</option></select>
         <button class="btn btn-secondary" onclick="refreshAll()">🔄 تحديث</button>
         <button class="btn btn-secondary" onclick="exportPDF('accounting')">📄 PDF</button>
         <button class="btn btn-secondary" onclick="exportExcel('accounting')">📊 Excel</button>
@@ -1068,6 +1070,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
     <div id="tab-cashbox" class="tab-pane">
       <div class="toolbar">
         <div class="toolbar-title">🏦 الخزنة</div>
+        <select class="form-select" style="width:auto;" id="cashCenterFilter" onchange="renderCashbox()"><option value="">🏢 كل السناتر</option></select>
         <button class="btn btn-secondary" onclick="refreshAll()">🔄 تحديث</button>
         <button class="btn btn-primary" onclick="openCashboxModal('deposit')">💵 إيداع</button>
         <button class="btn btn-danger" onclick="openCashboxModal('withdraw')">💸 سحب / استلام</button>
@@ -2045,7 +2048,8 @@ function openAddGroup(){
       <div class="form-group"><label class="form-label">الجدول (مثال: الأحد والأربعاء 4م)</label><input class="form-input" id="gSchedule" placeholder=""></div>
       <div class="form-group"><label class="form-label">الحد الأقصى للطلاب</label><input class="form-input" id="gMax" type="number" value="20"></div>
       <div class="form-group"><label class="form-label">الرسوم الشهرية</label><input class="form-input" id="gFee" type="number" placeholder="${DB.settings.monthlyFee}"></div>
-      <div class="form-group"><label class="form-label">نسبة المدرس %</label><input class="form-input" id="gPercent" type="number" placeholder="100"></div>
+      <div class="form-group"><label class="form-label">🏢 السنتر</label><select class="form-select" id="gCenter">${centerSelectHtml('')}</select></div>
+      <div class="form-group"><label class="form-label">نسبتي % (لو بدون سنتر)</label><input class="form-input" id="gPercent" type="number" placeholder="100"></div>
     </div>`;
   document.getElementById('modalFooter').innerHTML=`<button class="btn btn-primary" onclick="saveGroup()">💾 حفظ</button><button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>`;
   document.getElementById('modalOverlay').classList.add('show');
@@ -2062,10 +2066,11 @@ function saveGroup(editId=null){
       DB.groups[idx].maxStudents=Number(document.getElementById('gMax').value)||20;
       DB.groups[idx].fee=Number(document.getElementById('gFee').value)||DB.settings.monthlyFee;
       DB.groups[idx].teacherPercent=Number(document.getElementById('gPercent').value)||100;
+      DB.groups[idx].centerId=document.getElementById('gCenter')?.value||'';
       logActivity('تعديل مجموعة',name);
     }
   } else {
-    DB.groups.push({id:uid(),name,grade:document.getElementById('gGrade').value,schedule:document.getElementById('gSchedule').value,maxStudents:Number(document.getElementById('gMax').value)||20,fee:Number(document.getElementById('gFee').value)||DB.settings.monthlyFee,teacherPercent:Number(document.getElementById('gPercent').value)||100,createdAt:today()});
+    DB.groups.push({id:uid(),name,centerId:document.getElementById('gCenter')?.value||'',grade:document.getElementById('gGrade').value,schedule:document.getElementById('gSchedule').value,maxStudents:Number(document.getElementById('gMax').value)||20,fee:Number(document.getElementById('gFee').value)||DB.settings.monthlyFee,teacherPercent:Number(document.getElementById('gPercent').value)||100,createdAt:today()});
     logActivity('إضافة مجموعة',name);
   }
   saveDB(); closeModal(); renderGroups(); populateSelects(); showToast(editId?'تم التعديل':'تمت الإضافة','success');
@@ -2082,7 +2087,8 @@ function editGroup(id){
       <div class="form-group"><label class="form-label">الجدول</label><input class="form-input" id="gSchedule" value="${g.schedule||''}"></div>
       <div class="form-group"><label class="form-label">الحد الأقصى</label><input class="form-input" id="gMax" type="number" value="${g.maxStudents||20}"></div>
       <div class="form-group"><label class="form-label">الرسوم</label><input class="form-input" id="gFee" type="number" value="${g.fee||DB.settings.monthlyFee}"></div>
-      <div class="form-group"><label class="form-label">نسبة المدرس %</label><input class="form-input" id="gPercent" type="number" value="${g.teacherPercent||100}"></div>
+      <div class="form-group"><label class="form-label">🏢 السنتر</label><select class="form-select" id="gCenter">${centerSelectHtml(normCid(g.centerId))}</select></div>
+      <div class="form-group"><label class="form-label">نسبتي % (لو بدون سنتر)</label><input class="form-input" id="gPercent" type="number" value="${g.teacherPercent||100}"></div>
     </div>`;
   document.getElementById('modalFooter').innerHTML=`<button class="btn btn-primary" onclick="saveGroup('${id}')">💾 حفظ</button><button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>`;
   document.getElementById('modalOverlay').classList.add('show');
@@ -2779,6 +2785,7 @@ function savePayment(){
       by:currentUser?.name,
       time:new Date().toISOString(),
       type:'payment',
+      centerId:groupCenterId(pay.groupId),
       paymentId:pay.id
     });
   }
@@ -2815,115 +2822,189 @@ function deletePayment(id){
 // ============================================================
 // =================== PROFITS ================================
 // ============================================================
+// ============================================================
+// =================== السناتر (Multi-center) =================
+// ============================================================
+function ensureCenters(){ if(!Array.isArray(DB.centers)) DB.centers=[]; return DB.centers; }
+function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function normCid(id){ return (id&&ensureCenters().some(c=>c.id===id))?id:''; }
+function getCenterName(id){ return ensureCenters().find(c=>c.id===id)?.name||'بدون سنتر'; }
+function centerLabel(id){ return id?getCenterName(id):'—'; }
+function inCenterScope(cf,cid){ return !cf||(cf==='__none__'?!cid:cid===cf); }
+function centerSelectHtml(selected){
+  return '<option value="">بدون سنتر</option>'+ensureCenters().map(c=>`<option value="${c.id}" ${c.id===selected?'selected':''}>${escAttr(c.name)}</option>`).join('');
+}
+function fillCenterFilter(id){
+  const el=document.getElementById(id); if(!el) return '';
+  const cur=el.value;
+  const opts='<option value="">🏢 كل السناتر</option>'+ensureCenters().map(c=>`<option value="${c.id}">${escAttr(c.name)}</option>`).join('')+'<option value="__none__">بدون سنتر</option>';
+  if(el.dataset.sig!==opts){ el.innerHTML=opts; el.dataset.sig=opts; }
+  el.value=[...el.options].some(o=>o.value===cur)?cur:'';
+  return el.value;
+}
+// تقسيم المبلغ: نسبة السنتر / نسبتي حسب سنتر المجموعة
+function groupSplit(groupId){
+  const g=DB.groups.find(x=>x.id===groupId);
+  const c=g&&ensureCenters().find(x=>x.id===g.centerId);
+  if(c){ const cp=Math.min(100,Math.max(0,Number(c.centerPercent)||0)); return {centerPct:cp,myPct:100-cp,centerId:c.id}; }
+  const my=g?Math.min(100,Math.max(0,Number(g.teacherPercent)||100)):100;
+  return {centerPct:100-my,myPct:my,centerId:''};
+}
+function groupCenterId(gid){ return groupSplit(gid).centerId; }
+function setGroupCenter(gid,val){
+  const g=DB.groups.find(x=>x.id===gid); if(!g) return;
+  g.centerId=val||''; saveDB(); renderProfits(); showToast('تم ربط المجموعة بالسنتر','success');
+}
+
+function centerRowHtml(c){
+  return `<div class="center-row" data-id="${c.id}" style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+    <input class="form-input c-name" placeholder="اسم السنتر" value="${escAttr(c.name)}" style="flex:2;min-width:0;">
+    <input class="form-input c-pct" type="number" min="0" max="100" value="${Number(c.centerPercent)||0}" style="width:76px;text-align:center;">
+    <span style="font-size:.8rem;color:var(--txt2);white-space:nowrap;">% للسنتر</span>
+    <button class="btn btn-xs btn-danger" onclick="this.closest('.center-row').remove()">🗑️</button>
+  </div>`;
+}
+function openCentersModal(){
+  document.getElementById('modalBox').classList.remove('modal-lg');
+  document.getElementById('modalTitle').textContent='🏢 السناتر ونسبها';
+  document.getElementById('modalBody').innerHTML=`
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:.82rem;color:var(--txt2);line-height:1.8;">
+      اكتب اسم كل سنتر والنسبة اللي بياخدها من الإيراد. الباقي هو <b style="color:var(--gold2)">نسبتك</b> تلقائيًا.<br>
+      بعد كده اربط كل مجموعة بسنترها من صفحة الأرباح أو من تعديل المجموعة.
+    </div>
+    <div id="centersRows">${ensureCenters().map(centerRowHtml).join('')||'<div style="color:var(--txt3);font-size:.82rem;margin-bottom:10px;">لا توجد سناتر بعد — اضغط ➕ لإضافة أول سنتر</div>'}</div>
+    <button class="btn btn-sm btn-secondary" onclick="addCenterRow()">➕ سنتر جديد</button>`;
+  document.getElementById('modalFooter').innerHTML=`<button class="btn btn-primary" onclick="saveCenters()">💾 حفظ</button><button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function addCenterRow(){
+  const box=document.getElementById('centersRows'); if(!box) return;
+  if(!box.querySelector('.center-row')) box.innerHTML='';
+  box.insertAdjacentHTML('beforeend',centerRowHtml({id:uid(),name:'',centerPercent:0}));
+  box.querySelector('.center-row:last-child .c-name')?.focus();
+}
+function saveCenters(){
+  const list=[];
+  document.querySelectorAll('#centersRows .center-row').forEach(r=>{
+    const name=r.querySelector('.c-name').value.trim();
+    if(!name) return;
+    const pct=Math.min(100,Math.max(0,Number(r.querySelector('.c-pct').value)||0));
+    list.push({id:r.dataset.id,name,centerPercent:pct});
+  });
+  DB.centers=list;
+  DB.groups.forEach(g=>{ if(g.centerId&&!list.some(c=>c.id===g.centerId)) g.centerId=''; });
+  logActivity('تعديل السناتر',list.map(c=>`${c.name} ${c.centerPercent}%`).join(' | '));
+  saveDB(); closeModal();
+  renderProfits(); renderAccounting(); renderCashbox();
+  showToast('تم حفظ السناتر','success');
+}
+
+function profitItems(month,cf){
+  return DB.payments.filter(p=>p.month===month&&(p.status==='paid'||p.status==='partial')&&!p.refunded).map(p=>{
+    const sp=groupSplit(p.groupId); const amt=Number(p.amount||0); const my=Math.round(amt*sp.myPct/100);
+    return {p,amt,my,ctr:amt-my,cid:sp.centerId,gid:p.groupId||''};
+  }).filter(x=>inCenterScope(cf,x.cid));
+}
+
 function renderProfits(){
   const month=document.getElementById('profitMonth')?.value||today().slice(0,7);
   const pmEl=document.getElementById('profitMonth'); if(pmEl&&!pmEl.value) pmEl.value=month;
-  const div=document.getElementById('profitsContent');
-  const payments=DB.payments.filter(p=>p.month===month&&p.status==='paid'&&!p.refunded);
-  const total=payments.reduce((a,p)=>a+Number(p.amount||0),0);
-  const groupProfit=DB.groups.map(g=>{
-    const gPays=payments.filter(p=>p.groupId===g.id);
-    const gTotal=gPays.reduce((a,p)=>a+Number(p.amount||0),0);
-    const teacherCut=Math.round(gTotal*(g.teacherPercent||100)/100);
-    const expectedStudents=DB.students.filter(s=>s.groupId===g.id).length;
-    const paidStudents=new Set(gPays.map(p=>p.studentId)).size;
-    return {group:g,total:gTotal,teacherCut,count:gPays.length,expectedStudents,paidStudents,percent:g.teacherPercent||100};
-  });
-  const teacherTotal=groupProfit.reduce((a,x)=>a+x.teacherCut,0);
-  const allMonths=[]; const yr=new Date().getFullYear();
-  for(let m=1;m<=12;m++) allMonths.push(`${yr}-${String(m).padStart(2,'0')}`);
-  const monthlyData=allMonths.map(mo=>{
-    const mPays=DB.payments.filter(p=>p.month===mo&&p.status==='paid'&&!p.refunded);
-    return {month:mo,total:mPays.reduce((a,p)=>a+Number(p.amount||0),0)};
-  });
-  const totalYear=monthlyData.reduce((a,x)=>a+x.total,0);
+  const div=document.getElementById('profitsContent'); if(!div) return;
+  const cf=fillCenterFilter('profitCenter');
+  const centers=ensureCenters();
+  const items=profitItems(month,cf);
+  const acc=(DB.accounting||[]).filter(a=>(a.date||'').startsWith(month)&&inCenterScope(cf,normCid(a.centerId)));
+  const sum=(arr,f)=>arr.reduce((s,x)=>s+f(x),0);
+  const total=sum(items,x=>x.amt), myTot=sum(items,x=>x.my), ctrTot=sum(items,x=>x.ctr);
+  const exp=sum(acc.filter(a=>a.type==='expense'),a=>Number(a.amount||0));
+  const oth=sum(acc.filter(a=>a.type==='income'),a=>Number(a.amount||0));
+  const net=myTot+oth-exp;
+  const selCenter=centers.find(c=>c.id===cf);
 
+  // ملخص لكل سنتر
+  const cids=[...centers.map(c=>c.id),''].filter(cid=>inCenterScope(cf,cid));
+  const centerRows=cids.map(cid=>{
+    const it=items.filter(x=>x.cid===cid);
+    const ac=acc.filter(a=>normCid(a.centerId)===cid);
+    const e=sum(ac.filter(a=>a.type==='expense'),a=>Number(a.amount||0));
+    const o=sum(ac.filter(a=>a.type==='income'),a=>Number(a.amount||0));
+    const c=centers.find(x=>x.id===cid);
+    const my=sum(it,x=>x.my);
+    return {cid,name:c?c.name:'بدون سنتر',pct:c?Number(c.centerPercent)||0:null,collected:sum(it,x=>x.amt),ctr:sum(it,x=>x.ctr),my,exp:e,net:my+o-e};
+  }).filter(r=>r.cid!==''||r.collected||r.exp||!centers.length);
+
+  // ملخص لكل مجموعة
+  const groupRows=DB.groups.filter(g=>inCenterScope(cf,normCid(g.centerId))).map(g=>{
+    const it=items.filter(x=>x.gid===g.id);
+    return {g,collected:sum(it,x=>x.amt),my:sum(it,x=>x.my),paid:new Set(it.map(x=>x.p.studentId)).size,expected:DB.students.filter(s=>s.groupId===g.id).length,split:groupSplit(g.id)};
+  }).filter(r=>r.expected>0||r.collected>0);
+
+  const box='background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;';
   div.innerHTML=`
     <div class="cards-row">
-      <div class="stat-card green"><div class="stat-label">إجمالي الشهر</div><div class="stat-value green">${total.toLocaleString('ar-EG')}</div><div class="stat-sub">${DB.settings.currency}</div></div>
-      <div class="stat-card gold"><div class="stat-label">صافي ربحك</div><div class="stat-value">${teacherTotal.toLocaleString('ar-EG')}</div><div class="stat-sub">${DB.settings.currency}</div></div>
-      <div class="stat-card blue"><div class="stat-label">إجمالي السنة</div><div class="stat-value blue">${totalYear.toLocaleString('ar-EG')}</div><div class="stat-sub">${DB.settings.currency}</div></div>
-      <div class="stat-card green"><div class="stat-label">دخل اليوم</div><div class="stat-value green">${DB.payments.filter(p=>p.date===today()&&p.status==='paid'&&!p.refunded).reduce((a,p)=>a+Number(p.amount||0),0).toLocaleString('ar-EG')}</div><div class="stat-sub">${DB.settings.currency}</div></div>
+      <div class="stat-card blue"><div class="stat-label">💵 المحصّل من الطلاب</div><div class="stat-value blue">${total.toLocaleString('ar-EG')}</div><div class="stat-sub">${DB.settings.currency}</div></div>
+      <div class="stat-card purple"><div class="stat-label">🏢 حصة ${selCenter?escAttr(selCenter.name):'السناتر'}</div><div class="stat-value">${ctrTot.toLocaleString('ar-EG')}</div><div class="stat-sub">${selCenter?(Number(selCenter.centerPercent)||0)+'% من الإيراد':DB.settings.currency}</div></div>
+      <div class="stat-card green"><div class="stat-label">🙋 حصتي</div><div class="stat-value green">${myTot.toLocaleString('ar-EG')}</div><div class="stat-sub">${selCenter?(100-(Number(selCenter.centerPercent)||0))+'% من الإيراد':DB.settings.currency}</div></div>
+      <div class="stat-card red"><div class="stat-label">📉 المصروفات</div><div class="stat-value red">${exp.toLocaleString('ar-EG')}</div><div class="stat-sub">${DB.settings.currency}</div></div>
+      <div class="stat-card ${net>=0?'gold':'red'}"><div class="stat-label">✅ صافي ربحي</div><div class="stat-value" style="color:${net>=0?'var(--gold2)':'var(--danger)'}">${net.toLocaleString('ar-EG')}</div><div class="stat-sub">${oth>0?`شامل ${oth.toLocaleString('ar-EG')} إيرادات أخرى`:'حصتي − المصروفات'}</div></div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
-      <!-- Group breakdown table -->
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
-        <div class="section-title" style="margin-bottom:12px;">📊 تفصيل المجموعات</div>
-        ${groupProfit.filter(x=>x.expectedStudents>0).length===0?`<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-txt">لا مجموعات</div></div>`:
-        `<div class="table-wrapper"><table class="data-table" style="font-size:.8rem;">
-          <thead><tr><th>المجموعة</th><th>دفعوا</th><th>إيراد</th><th>نسبة%</th><th>ربحك</th></tr></thead>
-          <tbody>${groupProfit.filter(x=>x.expectedStudents>0).map(x=>`<tr>
-            <td style="font-weight:700">${x.group.name}</td>
-            <td><span style="color:var(--success)">${x.paidStudents}</span>/<span style="color:var(--txt3)">${x.expectedStudents}</span></td>
-            <td style="color:var(--info)">${fmtMoney(x.total)}</td>
-            <td>
-              <div style="display:flex;align-items:center;gap:4px;">
-                <input type="number" value="${x.percent}" min="0" max="100" style="width:54px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:3px 6px;color:var(--txt);font-size:.78rem;text-align:center;" onchange="updateGroupPercent('${x.group.id}',this.value)">%
-              </div>
-            </td>
-            <td style="color:var(--success);font-weight:700">${fmtMoney(x.teacherCut)}</td>
-          </tr>`).join('')}
-          <tr style="background:rgba(201,162,39,.08);font-weight:700;">
-            <td colspan="2">الإجمالي</td>
-            <td style="color:var(--info)">${fmtMoney(total)}</td>
-            <td>—</td>
-            <td style="color:var(--success)">${fmtMoney(teacherTotal)}</td>
-          </tr>
-          </tbody></table></div>`}
+    <div style="${box}">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+        <div class="section-title" style="margin:0;border:none;padding:0;">🏢 حساب كل سنتر لوحده</div>
+        <button class="btn btn-xs btn-secondary" onclick="openCentersModal()">⚙️ إدارة السناتر ونسبها</button>
       </div>
-
-      <!-- Manual calculator -->
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
-        <div class="section-title" style="margin-bottom:12px;">🧮 حاسبة يدوية</div>
-        <div class="form-group">
-          <label class="form-label">المبلغ الإجمالي</label>
-          <input class="form-input" id="calcTotal" type="number" placeholder="أدخل المبلغ" oninput="calcProfit()">
-        </div>
-        <div class="form-group">
-          <label class="form-label">نسبتك %</label>
-          <input class="form-input" id="calcPercent" type="number" value="100" min="0" max="100" oninput="calcProfit()">
-        </div>
-        <div class="form-group">
-          <label class="form-label">المصاريف (إيجار، نور، كتب...)</label>
-          <input class="form-input" id="calcExpenses" type="number" placeholder="0" oninput="calcProfit()">
-        </div>
-        <div id="calcResult" style="background:var(--bg3);border-radius:10px;padding:14px;margin-top:8px;display:none;">
-          <div class="detail-row"><span class="detail-label">الإيراد الإجمالي</span><span class="detail-value gold" id="calcGross">—</span></div>
-          <div class="detail-row"><span class="detail-label">حصتك</span><span class="detail-value green" id="calcShare">—</span></div>
-          <div class="detail-row"><span class="detail-label">المصاريف</span><span class="detail-value red" id="calcExpDisp">—</span></div>
-          <div class="detail-row" style="border:none;"><span class="detail-label" style="color:var(--gold2);font-weight:900;">صافي الربح</span><span class="detail-value" style="color:var(--gold2);font-size:1.3rem;" id="calcNet">—</span></div>
-        </div>
-        <div style="margin-top:14px;">
-          <div class="section-title" style="font-size:.85rem;">📋 مصاريف محفوظة</div>
-          <div id="savedExpenses" style="max-height:130px;overflow-y:auto;"></div>
-          <div style="display:flex;gap:8px;margin-top:8px;">
-            <input class="form-input" id="expLabel" placeholder="اسم المصروف (إيجار...)" style="flex:1;">
-            <input class="form-input" id="expAmt" type="number" placeholder="المبلغ" style="width:100px;">
-            <button class="btn btn-xs btn-primary" onclick="addSavedExpense()">➕</button>
-          </div>
-        </div>
-      </div>
+      ${centers.length===0?`<div class="empty-state" style="padding:20px 0;"><div class="empty-icon">🏢</div><div class="empty-txt">لسه مفيش سناتر — اضغط "إدارة السناتر" وضيف سنترك الأول ونسبته</div></div>`:
+      `<div class="table-wrapper"><table class="data-table" style="font-size:.82rem;">
+        <thead><tr><th>السنتر</th><th>المحصّل</th><th>نسبة السنتر</th><th>حصة السنتر</th><th>حصتي</th><th>مصروفات</th><th>صافي ربحي</th></tr></thead>
+        <tbody>${centerRows.map(r=>`<tr>
+          <td style="font-weight:700">${escAttr(r.name)}</td>
+          <td style="color:var(--info)">${fmtMoney(r.collected)}</td>
+          <td>${r.pct==null?'—':r.pct+'%'}</td>
+          <td style="color:var(--warn)">${fmtMoney(r.ctr)}</td>
+          <td style="color:var(--success);font-weight:700">${fmtMoney(r.my)}</td>
+          <td style="color:var(--danger)">${fmtMoney(r.exp)}</td>
+          <td style="color:${r.net>=0?'var(--gold2)':'var(--danger)'};font-weight:800">${fmtMoney(r.net)}</td>
+        </tr>`).join('')}
+        ${centerRows.length>1?`<tr style="background:rgba(201,162,39,.08);font-weight:800;"><td>الإجمالي</td><td>${fmtMoney(total)}</td><td>—</td><td>${fmtMoney(ctrTot)}</td><td>${fmtMoney(myTot)}</td><td>${fmtMoney(exp)}</td><td>${fmtMoney(net)}</td></tr>`:''}
+        </tbody></table></div>`}
     </div>
 
-    <!-- Monthly chart -->
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
-      <div class="section-title" style="margin-bottom:12px;">📈 الإيرادات الشهرية ${yr}</div>
+    <div style="${box}">
+      <div class="section-title" style="margin-bottom:12px;">📚 المجموعات وسنترها</div>
+      ${groupRows.length===0?`<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-txt">لا مجموعات في هذا العرض</div></div>`:
+      `<div class="table-wrapper"><table class="data-table" style="font-size:.8rem;">
+        <thead><tr><th>المجموعة</th><th>السنتر</th><th>دفعوا</th><th>المحصّل</th><th>نسبتي</th><th>حصتي</th></tr></thead>
+        <tbody>${groupRows.map(r=>`<tr>
+          <td style="font-weight:700">${escAttr(r.g.name)}</td>
+          <td><select class="form-select" style="min-width:110px;padding:3px 6px;font-size:.78rem;" onchange="setGroupCenter('${r.g.id}',this.value)">${centerSelectHtml(normCid(r.g.centerId))}</select></td>
+          <td><span style="color:var(--success)">${r.paid}</span>/<span style="color:var(--txt3)">${r.expected}</span></td>
+          <td style="color:var(--info)">${fmtMoney(r.collected)}</td>
+          <td>${r.split.myPct}%${r.split.centerId?'':` <button class="btn btn-xs btn-secondary" title="تعديل نسبتي (مجموعة بدون سنتر)" onclick="editGroup('${r.g.id}')">✏️</button>`}</td>
+          <td style="color:var(--success);font-weight:700">${fmtMoney(r.my)}</td>
+        </tr>`).join('')}</tbody></table></div>`}
+    </div>
+
+    <div style="${box}">
+      <div class="section-title" style="margin-bottom:12px;">📈 الإيراد وحصتي — شهور ${new Date().getFullYear()}</div>
       <canvas id="profitYearChart" style="max-height:200px;"></canvas>
     </div>`;
 
-  // Load saved expenses
-  renderSavedExpenses();
-
   setTimeout(()=>{
-    const c=document.getElementById('profitYearChart');
-    if(!c) return;
+    const c=document.getElementById('profitYearChart'); if(!c||typeof Chart==='undefined') return;
     if(charts.profitYear) charts.profitYear.destroy();
+    const yr=new Date().getFullYear();
     const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    const col=[],mine=[];
+    for(let m=1;m<=12;m++){ const it=profitItems(`${yr}-${String(m).padStart(2,'0')}`,cf); col.push(sum(it,x=>x.amt)); mine.push(sum(it,x=>x.my)); }
     charts.profitYear=new Chart(c,{
       type:'bar',
-      data:{labels:months,datasets:[{label:'الإيراد',data:monthlyData.map(x=>x.total),backgroundColor:monthlyData.map((_,i)=>i===new Date().getMonth()?'rgba(201,162,39,.9)':'rgba(41,128,185,.5)'),borderRadius:8,borderSkipped:false}]},
-      options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.parsed.y.toLocaleString('ar-EG')} ${DB.settings.currency}`}}},scales:{x:{ticks:{color:'#8898b0',font:{family:'Cairo'}}},y:{ticks:{color:'#8898b0',font:{family:'Cairo'},callback:v=>v.toLocaleString()},grid:{color:'rgba(26,48,80,.4)'}}}}
+      data:{labels:months,datasets:[
+        {label:'المحصّل',data:col,backgroundColor:'rgba(41,128,185,.5)',borderRadius:6},
+        {label:'حصتي',data:mine,backgroundColor:'rgba(39,174,96,.75)',borderRadius:6}
+      ]},
+      options:{responsive:true,plugins:{legend:{labels:{color:'#8898b0',font:{family:'Cairo'}}},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('ar-EG')} ${DB.settings.currency}`}}},
+        scales:{x:{ticks:{color:'#8898b0',font:{family:'Cairo'}}},y:{ticks:{color:'#8898b0',font:{family:'Cairo'},callback:v=>v.toLocaleString()}}}}
     });
   },150);
 }
@@ -6387,8 +6468,9 @@ const ACC_EXPENSE_TYPES=['رواتب المدرسين','رواتب الموظف�
 
 function renderAccounting(){
   const m=document.getElementById('accMonth')?.value||today().slice(0,7);
+  const cf=fillCenterFilter('accCenterFilter');
   const acc=DB.accounting||[];
-  let items=acc.filter(a=>a.date.startsWith(m));
+  let items=acc.filter(a=>a.date.startsWith(m)&&inCenterScope(cf,normCid(a.centerId)));
   const incomes=items.filter(a=>a.type==='income');
   const expenses=items.filter(a=>a.type==='expense');
   const totalInc=incomes.reduce((s,a)=>s+Number(a.amount||0),0);
@@ -6408,8 +6490,8 @@ function renderAccounting(){
           <div class="section-title" style="margin:0;border:none;padding:0;">📈 الإيرادات</div>
           <button class="btn btn-xs btn-success" onclick="openAccModal('income')">➕ إيراد</button>
         </div>
-        ${incomes.length?`<div class="table-wrapper"><table class="data-table"><thead><tr><th>النوع</th><th>المبلغ</th><th>التاريخ</th><th></th></tr></thead><tbody>${
-          incomes.sort((a,b)=>b.date.localeCompare(a.date)).map(a=>`<tr><td><span class="badge badge-green">${a.category||'—'}</span></td><td style="color:var(--success);font-weight:700">${fmtMoney(a.amount)}</td><td style="font-size:.78rem">${fmtDate(a.date)}</td><td class="actions"><button class="btn btn-xs btn-secondary" onclick="editAccEntry('${a.id}')">✏️</button>${checkPerm('delete')?`<button class="btn btn-xs btn-danger" onclick="deleteAccEntry('${a.id}')">🗑️</button>`:''}</td></tr>`).join('')}</tbody></table></div>`
+        ${incomes.length?`<div class="table-wrapper"><table class="data-table"><thead><tr><th>النوع</th><th>المبلغ</th><th>السنتر</th><th>التاريخ</th><th></th></tr></thead><tbody>${
+          incomes.sort((a,b)=>b.date.localeCompare(a.date)).map(a=>`<tr><td><span class="badge badge-green">${a.category||'—'}</span></td><td style="color:var(--success);font-weight:700">${fmtMoney(a.amount)}</td><td style="font-size:.75rem;color:var(--txt2)">${centerLabel(normCid(a.centerId))}</td><td style="font-size:.78rem">${fmtDate(a.date)}</td><td class="actions"><button class="btn btn-xs btn-secondary" onclick="editAccEntry('${a.id}')">✏️</button>${checkPerm('delete')?`<button class="btn btn-xs btn-danger" onclick="deleteAccEntry('${a.id}')">🗑️</button>`:''}</td></tr>`).join('')}</tbody></table></div>`
         :`<div class="empty-state" style="padding:30px 0"><div class="empty-icon">📈</div><div class="empty-txt">لا إيرادات هذا الشهر</div></div>`}
       </div>
       <!-- Expenses -->
@@ -6418,8 +6500,8 @@ function renderAccounting(){
           <div class="section-title" style="margin:0;border:none;padding:0;">📉 المصروفات</div>
           <button class="btn btn-xs btn-danger" onclick="openAccModal('expense')">➕ مصروف</button>
         </div>
-        ${expenses.length?`<div class="table-wrapper"><table class="data-table"><thead><tr><th>النوع</th><th>المبلغ</th><th>التاريخ</th><th></th></tr></thead><tbody>${
-          expenses.sort((a,b)=>b.date.localeCompare(a.date)).map(a=>`<tr><td><span class="badge badge-red">${a.category||'—'}</span></td><td style="color:var(--danger);font-weight:700">${fmtMoney(a.amount)}</td><td style="font-size:.78rem">${fmtDate(a.date)}</td><td class="actions"><button class="btn btn-xs btn-secondary" onclick="editAccEntry('${a.id}')">✏️</button>${checkPerm('delete')?`<button class="btn btn-xs btn-danger" onclick="deleteAccEntry('${a.id}')">🗑️</button>`:''}</td></tr>`).join('')}</tbody></table></div>`
+        ${expenses.length?`<div class="table-wrapper"><table class="data-table"><thead><tr><th>النوع</th><th>المبلغ</th><th>السنتر</th><th>التاريخ</th><th></th></tr></thead><tbody>${
+          expenses.sort((a,b)=>b.date.localeCompare(a.date)).map(a=>`<tr><td><span class="badge badge-red">${a.category||'—'}</span></td><td style="color:var(--danger);font-weight:700">${fmtMoney(a.amount)}</td><td style="font-size:.75rem;color:var(--txt2)">${centerLabel(normCid(a.centerId))}</td><td style="font-size:.78rem">${fmtDate(a.date)}</td><td class="actions"><button class="btn btn-xs btn-secondary" onclick="editAccEntry('${a.id}')">✏️</button>${checkPerm('delete')?`<button class="btn btn-xs btn-danger" onclick="deleteAccEntry('${a.id}')">🗑️</button>`:''}</td></tr>`).join('')}</tbody></table></div>`
         :`<div class="empty-state" style="padding:30px 0"><div class="empty-icon">📉</div><div class="empty-txt">لا مصروفات هذا الشهر</div></div>`}
       </div>
     </div>
@@ -6436,8 +6518,8 @@ function renderAccounting(){
       const ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
       const mn=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
       months.push(mn[d.getMonth()]);
-      incData.push((DB.accounting||[]).filter(a=>a.date.startsWith(ym)&&a.type==='income').reduce((s,a)=>s+Number(a.amount||0),0));
-      expData.push((DB.accounting||[]).filter(a=>a.date.startsWith(ym)&&a.type==='expense').reduce((s,a)=>s+Number(a.amount||0),0));
+      incData.push((DB.accounting||[]).filter(a=>a.date.startsWith(ym)&&a.type==='income'&&inCenterScope(cf,normCid(a.centerId))).reduce((s,a)=>s+Number(a.amount||0),0));
+      expData.push((DB.accounting||[]).filter(a=>a.date.startsWith(ym)&&a.type==='expense'&&inCenterScope(cf,normCid(a.centerId))).reduce((s,a)=>s+Number(a.amount||0),0));
     }
     const canvas=document.getElementById('accChart');
     if(canvas){
@@ -6462,6 +6544,7 @@ function openAccModal(typeArg, editId=null){
       </div>
       <div class="form-group" id="accOtherGroup" style="display:none"><label class="form-label">اكتب النوع</label><input class="form-input" id="accOtherCat" placeholder="النوع..."></div>
       <div class="form-group"><label class="form-label">المبلغ (${DB.settings.currency})</label><input class="form-input" id="accAmount" type="number" value="${existing?.amount||''}" placeholder="0"></div>
+      ${ensureCenters().length?`<div class="form-group"><label class="form-label">🏢 السنتر</label><select class="form-select" id="accCenterSel">${centerSelectHtml(existing?normCid(existing.centerId):(()=>{const f=document.getElementById('accCenterFilter')?.value||'';return f&&f!=='__none__'?f:'';})())}</select></div>`:''}
       <div class="form-group"><label class="form-label">التاريخ</label><input class="form-input" id="accDate" type="date" value="${existing?.date||today()}"></div>
       <div class="form-group full"><label class="form-label">ملاحظات</label><textarea class="form-textarea" id="accNotes" placeholder="ملاحظات...">${existing?.notes||''}</textarea></div>
     </div>`;
@@ -6479,7 +6562,7 @@ function saveAccEntry(type, editId){
   if(cat==='__other__') cat=document.getElementById('accOtherCat').value.trim()||'آخر';
   const amount=Number(document.getElementById('accAmount').value)||0;
   if(!amount){showToast('أدخل المبلغ','error');return;}
-  const obj={type,category:cat,amount,date:document.getElementById('accDate').value||today(),notes:document.getElementById('accNotes').value,createdBy:currentUser?.name,createdAt:new Date().toISOString()};
+  const obj={type,category:cat,amount,centerId:document.getElementById('accCenterSel')?.value||(editId?((DB.accounting||[]).find(x=>x.id===editId)?.centerId||''):''),date:document.getElementById('accDate').value||today(),notes:document.getElementById('accNotes').value,createdBy:currentUser?.name,createdAt:new Date().toISOString()};
   DB.accounting=DB.accounting||[];
   if(editId){
     const idx=DB.accounting.findIndex(x=>x.id===editId);
@@ -6494,7 +6577,7 @@ function saveAccEntry(type, editId){
       const sign=type==='income'?1:-1;
       DB.cashbox.balance=(DB.cashbox.balance||0)+sign*amount;
       DB.cashbox.transactions=DB.cashbox.transactions||[];
-      DB.cashbox.transactions.unshift({id:uid(),desc:`${type==='income'?'إيراد':'مصروف'} - ${cat}`,amount:sign*amount,balance:DB.cashbox.balance,date:obj.date,by:currentUser?.name,time:new Date().toISOString()});
+      DB.cashbox.transactions.unshift({id:uid(),desc:`${type==='income'?'إيراد':'مصروف'} - ${cat}`,amount:sign*amount,balance:DB.cashbox.balance,date:obj.date,by:currentUser?.name,time:new Date().toISOString(),centerId:obj.centerId});
     }
   }
   saveDB(); closeModal(); renderAccounting(); showToast('تم الحفظ','success');
@@ -6514,11 +6597,13 @@ function deleteAccEntry(id){
 function renderCashbox(){
   const div=document.getElementById('cashboxContent'); if(!div)return;
   if(!DB.cashbox) DB.cashbox={balance:0,transactions:[]};
-  const bal=DB.cashbox.balance||0;
-  const txs=[...(DB.cashbox.transactions||[])].sort((a,b)=>b.time.localeCompare(a.time));
+  const cf=fillCenterFilter('cashCenterFilter');
+  const inScopeTx=t=>inCenterScope(cf,normCid(t.centerId));
+  const bal=cf?(DB.cashbox.transactions||[]).filter(inScopeTx).reduce((s,t)=>s+Number(t.amount||0),0):(DB.cashbox.balance||0);
+  const txs=[...(DB.cashbox.transactions||[])].filter(inScopeTx).sort((a,b)=>b.time.localeCompare(a.time));
   div.innerHTML=`
     <div style="text-align:center;background:var(--bg2);border:2px solid ${bal>=0?'rgba(39,174,96,.3)':'rgba(192,57,43,.3)'};border-radius:16px;padding:30px;margin-bottom:24px;">
-      <div style="font-size:.9rem;color:var(--txt2);margin-bottom:8px;">💼 رصيد الخزنة الحالي</div>
+      <div style="font-size:.9rem;color:var(--txt2);margin-bottom:8px;">💼 ${cf?'رصيد '+(cf==='__none__'?'العمليات بدون سنتر':getCenterName(cf)):'رصيد الخزنة الحالي'}</div>
       <div class="cashbox-balance" style="color:${bal>=0?'var(--gold2)':'var(--danger)'};">${fmtMoney(bal)}</div>
       <div style="font-size:.8rem;color:var(--txt3);">آخر تحديث: ${txs[0]?fmtDate(txs[0].date):'—'}</div>
       <div style="display:flex;gap:12px;justify-content:center;margin-top:16px;flex-wrap:wrap;">
@@ -6533,11 +6618,11 @@ function renderCashbox(){
       <div class="stat-card gold"><div class="stat-label">عدد العمليات</div><div class="stat-value">${txs.length}</div></div>
     </div>
     <div class="section-title">📋 سجل الخزنة</div>
-    ${txs.length?`<div class="table-wrapper"><table class="data-table"><thead><tr><th>البيان</th><th>المبلغ</th><th>الرصيد بعد</th><th>التاريخ</th><th>المسؤول</th>${checkPerm('delete')?'<th>حذف</th>':''}</tr></thead><tbody>${
+    ${txs.length?`<div class="table-wrapper"><table class="data-table"><thead><tr><th>البيان</th><th>المبلغ</th><th>السنتر</th>${cf?'':'<th>الرصيد بعد</th>'}<th>التاريخ</th><th>المسؤول</th>${checkPerm('delete')?'<th>حذف</th>':''}</tr></thead><tbody>${
       txs.map(t=>`<tr>
         <td>${t.desc||'—'}${t.note?`<br><span style="font-size:.74rem;color:var(--txt2)">${t.note}</span>`:''}</td>
         <td style="font-weight:700;color:${t.amount>=0?'var(--success)':'var(--danger)'}">${t.amount>=0?'+':''}${fmtMoney(t.amount)}</td>
-        <td style="color:var(--gold2)">${fmtMoney(t.balance)}</td>
+        <td style="font-size:.75rem;color:var(--txt2)">${centerLabel(normCid(t.centerId))}</td>${cf?'':`<td style="color:var(--gold2)">${fmtMoney(t.balance)}</td>`}
         <td style="font-size:.78rem">${fmtDate(t.date)}</td>
         <td style="font-size:.78rem;color:var(--txt2)">${t.by||'—'}</td>
         ${checkPerm('delete')?`<td><button class="btn btn-xs btn-danger" onclick="deleteCashboxTx('${t.id}')">🗑️</button></td>`:''}
@@ -6569,6 +6654,7 @@ function openCashboxModal(type){
     <div class="form-row">
       <div class="form-group"><label class="form-label">المبلغ (${DB.settings.currency}) *</label><input class="form-input" id="cashAmount" type="number" placeholder="0" min="1"></div>
       <div class="form-group"><label class="form-label">التاريخ</label><input class="form-input" id="cashDate" type="date" value="${today()}"></div>
+      ${ensureCenters().length?`<div class="form-group"><label class="form-label">🏢 السنتر</label><select class="form-select" id="cashCenter">${centerSelectHtml((()=>{const f=document.getElementById('cashCenterFilter')?.value||'';return f&&f!=='__none__'?f:'';})())}</select></div>`:''}
       <div class="form-group full"><label class="form-label">البيان</label><input class="form-input" id="cashDesc" placeholder="${type==='receive'?'مثال: استلام إيرادات اليوم من الموظف':type==='deposit'?'مثال: إيرادات اليوم':'مثال: دفع فاتورة'}"></div>
       <div class="form-group full"><label class="form-label">ملاحظات</label><textarea class="form-textarea" id="cashNote" placeholder="اختياري" style="min-height:60px;"></textarea></div>
     </div>`;
@@ -6654,7 +6740,8 @@ function saveCashboxTx(type){
     id:uid(),desc:desc+empNote,note,
     amount:sign*amount,balance:DB.cashbox.balance,
     date:dateVal,by:currentUser?.name,
-    time:new Date().toISOString(),type
+    time:new Date().toISOString(),type,
+    centerId:document.getElementById('cashCenter')?.value||''
   });
   logActivity(`خزنة - ${desc}`,`${sign>0?'+':''}${fmtMoney(sign*amount)} | الرصيد: ${fmtMoney(DB.cashbox.balance)}`);
   saveDB(); closeModal(); renderCashbox();
