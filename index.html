@@ -219,6 +219,10 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
 .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,39,.12);}
 .form-textarea{resize:vertical;min-height:90px;}
 .form-select option{background:var(--bg2);}
+/* قائمة أسماء الطلاب في نموذج الدفعة: ألوان واضحة */
+#pStudent{background:var(--bg2);color:var(--txt);padding:4px;}
+#pStudent option{background:var(--bg2);color:#fff;padding:9px 10px;margin-bottom:2px;border-radius:6px;font-size:.92rem;font-weight:600;opacity:1;}
+#pStudent option:checked,#pStudent:focus option:checked{background:linear-gradient(var(--gold),var(--gold));color:#000;font-weight:800;}
 /* ======= BADGES ======= */
 .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:.73rem;font-weight:700;}
 .badge-green{background:rgba(39,174,96,.2);color:var(--success);}
@@ -779,7 +783,8 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);direct
     <div id="tab-payments" class="tab-pane">
       <div class="toolbar">
         <div class="toolbar-title">💰 المدفوعات</div>
-        <div class="search-bar"><span>🔍</span><input type="text" placeholder="بحث..." oninput="filterPayments(this.value)"></div>
+        <select class="form-select" style="width:auto;" id="payGroupFilter" onchange="renderPayments()"><option value="">📚 كل المجموعات</option></select>
+        <div class="search-bar"><span>🔍</span><input type="text" id="paySearchInput" placeholder="اكتب اسم الطالب..." oninput="renderPayments()" autocomplete="off"></div>
         <select class="form-select" style="width:auto;" id="payMonthFilter" onchange="renderPayments()">
           <option value="">كل الشهور</option>
         </select>
@@ -1872,6 +1877,7 @@ function openAddStudent(){
       <div class="form-group"><label class="form-label">📱 رقم الطالب (اختياري)</label><input class="form-input" id="sStudentPhone" placeholder="01xxxxxxxxx" dir="ltr"></div>
       <div class="form-group"><label class="form-label">الصف الدراسي</label><select class="form-select" id="sGrade"><option value="">-- اختر --</option>${grades}</select></div>
       <div class="form-group"><label class="form-label">المجموعة</label><select class="form-select" id="sGroup"><option value="">-- اختر --</option>${groups}</select></div>
+      <div class="form-group"><label class="form-label">🏷️ نسبة الخصم % (اختياري)</label><input class="form-input" id="sDiscount" type="number" min="0" max="100" step="1" value="0" placeholder="0"></div>
       <div class="form-group full"><label class="form-label">ملاحظات</label><textarea class="form-textarea" id="sNotes" placeholder="ملاحظات اختيارية"></textarea></div>
     </div>`;
   document.getElementById('modalFooter').innerHTML=`<button class="btn btn-primary" onclick="saveStudent()">💾 حفظ</button><button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>`;
@@ -1883,6 +1889,7 @@ function saveStudent(editId=null){
   const phone=document.getElementById('sPhone').value.trim();
   const studentPhone=document.getElementById('sStudentPhone')?.value.trim()||'';
   if(!name){ showToast('أدخل اسم الطالب','error'); return; }
+  const discount=Math.min(100,Math.max(0,Number(document.getElementById('sDiscount')?.value)||0));
   if(editId){
     const idx=DB.students.findIndex(s=>s.id===editId);
     if(idx>-1){
@@ -1891,11 +1898,12 @@ function saveStudent(editId=null){
       DB.students[idx].grade=document.getElementById('sGrade').value;
       DB.students[idx].groupId=document.getElementById('sGroup').value;
       DB.students[idx].notes=document.getElementById('sNotes').value;
+      DB.students[idx].discount=discount;
       logActivity('تعديل طالب',name);
     }
   } else {
     const code=genCode();
-    DB.students.push({id:uid(),name,phone,studentPhone,grade:document.getElementById('sGrade').value,groupId:document.getElementById('sGroup').value,notes:document.getElementById('sNotes').value,code,createdAt:today(),createdBy:currentUser?.name});
+    DB.students.push({id:uid(),name,phone,studentPhone,grade:document.getElementById('sGrade').value,groupId:document.getElementById('sGroup').value,notes:document.getElementById('sNotes').value,discount,code,createdAt:today(),createdBy:currentUser?.name});
     logActivity('إضافة طالب',name);
   }
   saveDB(); closeModal(); renderStudents(); populateSelects(); showToast(editId?'تم التعديل':'تمت الإضافة','success');
@@ -1913,6 +1921,7 @@ function editStudent(id){
       <div class="form-group"><label class="form-label">📱 رقم الطالب</label><input class="form-input" id="sStudentPhone" value="${s.studentPhone||''}" dir="ltr"></div>
       <div class="form-group"><label class="form-label">الصف</label><select class="form-select" id="sGrade"><option value="">-- اختر --</option>${grades}</select></div>
       <div class="form-group"><label class="form-label">المجموعة</label><select class="form-select" id="sGroup"><option value="">-- اختر --</option>${groups}</select></div>
+      <div class="form-group"><label class="form-label">🏷️ نسبة الخصم %</label><input class="form-input" id="sDiscount" type="number" min="0" max="100" step="1" value="${Number(s.discount)||0}"></div>
       <div class="form-group full"><label class="form-label">ملاحظات</label><textarea class="form-textarea" id="sNotes">${s.notes||''}</textarea></div>
     </div>`;
   document.getElementById('modalFooter').innerHTML=`<button class="btn btn-primary" onclick="saveStudent('${id}')">💾 حفظ</button><button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>`;
@@ -2540,7 +2549,25 @@ function renderPerformance(){
 // ============================================================
 // =================== PAYMENTS ===============================
 // ============================================================
+function normAr(t){
+  return String(t||'').toLowerCase().replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').trim();
+}
+function payStudentMatch(s,gid,q){
+  if(!s) return false;
+  if(gid && s.groupId!==gid) return false;
+  if(q && !(normAr(s.name).includes(q)||String(s.code||'').toLowerCase().includes(q)||String(s.phone||'').includes(q))) return false;
+  return true;
+}
 function renderPayments(){
+  // فلتر المجموعة + البحث بالاسم
+  const gSel=document.getElementById('payGroupFilter');
+  if(gSel){
+    const cur=gSel.value;
+    const opts='<option value="">📚 كل المجموعات</option>'+DB.groups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+    if(gSel.dataset.sig!==opts){ gSel.innerHTML=opts; gSel.dataset.sig=opts; gSel.value=cur; }
+  }
+  const groupF=gSel?.value||'';
+  const nameQ=normAr(document.getElementById('paySearchInput')?.value||'');
   const statusF=document.getElementById('payStatusFilter')?.value||'';
   const monthF=document.getElementById('payMonthFilter')?.value||today().slice(0,7);
   // Sync month filter selector
@@ -2549,11 +2576,18 @@ function renderPayments(){
   let payments=[...DB.payments].sort((a,b)=>b.date?.localeCompare(a.date||''));
   if(statusF) payments=payments.filter(p=>p.status===statusF);
   if(monthF) payments=payments.filter(p=>p.month===monthF);
+  if(groupF||nameQ) payments=payments.filter(p=>{
+    const st=DB.students.find(x=>x.id===p.studentId);
+    if(groupF && (p.groupId||st?.groupId)!==groupF) return false;
+    return payStudentMatch(st,'',nameQ);
+  });
   const totalPaid=DB.payments.filter(p=>p.status==='paid'&&!p.refunded).reduce((a,p)=>a+Number(p.amount||0),0);
   const monthPaid=DB.payments.filter(p=>p.month===monthF&&p.status==='paid'&&!p.refunded).reduce((a,p)=>a+Number(p.amount||0),0);
   const lateStudents=DB.students.filter(s=>!DB.payments.find(p=>p.studentId===s.id&&p.month===monthF&&(p.status==='paid'||p.status==='partial')&&!p.refunded));
   const paidStudents=DB.students.filter(s=>DB.payments.find(p=>p.studentId===s.id&&p.month===monthF&&p.status==='paid'&&!p.refunded));
   const todayInc=DB.payments.filter(p=>p.date===today()&&p.status==='paid'&&!p.refunded).reduce((a,p)=>a+Number(p.amount||0),0);
+  const paidList=paidStudents.filter(s=>payStudentMatch(s,groupF,nameQ));
+  const lateList=lateStudents.filter(s=>payStudentMatch(s,groupF,nameQ));
   document.getElementById('payStats').innerHTML=`
     <div class="stat-card green"><div class="stat-label">إيراد هذا الشهر</div><div class="stat-value green">${monthPaid.toLocaleString('ar-EG')}</div><div class="stat-sub">${DB.settings.currency}</div></div>
     <div class="stat-card gold"><div class="stat-label">إجمالي الكل</div><div class="stat-value">${totalPaid.toLocaleString('ar-EG')}</div><div class="stat-sub">${DB.settings.currency}</div></div>
@@ -2566,20 +2600,20 @@ function renderPayments(){
   const tabs=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">
       <div style="background:var(--bg2);border:1px solid rgba(39,174,96,.25);border-radius:12px;padding:14px;">
-        <div style="font-size:.85rem;font-weight:700;color:var(--success);margin-bottom:10px;">✅ دفعوا هذا الشهر (${paidStudents.length})</div>
+        <div style="font-size:.85rem;font-weight:700;color:var(--success);margin-bottom:10px;">✅ دفعوا هذا الشهر (${paidList.length})</div>
         <div style="max-height:160px;overflow-y:auto;">
-          ${paidStudents.length===0?'<div style="color:var(--txt3);font-size:.8rem">لا أحد دفع بعد</div>':
-          paidStudents.map(s=>{const wp=s.phone?(s.phone.replace(/\D/g,'').replace(/^0/,'2')):null;return`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(26,48,80,.3);font-size:.82rem;">
+          ${paidList.length===0?'<div style="color:var(--txt3);font-size:.8rem">لا أحد دفع بعد</div>':
+          paidList.map(s=>{const wp=s.phone?(s.phone.replace(/\D/g,'').replace(/^0/,'2')):null;return`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(26,48,80,.3);font-size:.82rem;">
             <span>${s.name}</span>
             ${wp?`<button class="btn btn-xs btn-secondary" id="sendbtn-payment-${wp}" onclick="sendWAChoice('${s.id}','payment','${monthF}');markSent('${wp}','payment')">📲</button>`:''}
           </div>`}).join('')}
         </div>
       </div>
       <div style="background:var(--bg2);border:1px solid rgba(192,57,43,.25);border-radius:12px;padding:14px;">
-        <div style="font-size:.85rem;font-weight:700;color:var(--danger);margin-bottom:10px;">❌ لم يدفعوا بعد (${lateStudents.length})</div>
+        <div style="font-size:.85rem;font-weight:700;color:var(--danger);margin-bottom:10px;">❌ لم يدفعوا بعد (${lateList.length})</div>
         <div style="max-height:140px;overflow-y:auto;">
-          ${lateStudents.length===0?'<div style="color:var(--txt3);font-size:.8rem">الكل دفع! 🎉</div>':
-          lateStudents.map(s=>{const wp=s.phone?(s.phone.replace(/\D/g,'').replace(/^0/,'2')):null;return`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(26,48,80,.3);font-size:.82rem;">
+          ${lateList.length===0?'<div style="color:var(--txt3);font-size:.8rem">الكل دفع! 🎉</div>':
+          lateList.map(s=>{const wp=s.phone?(s.phone.replace(/\D/g,'').replace(/^0/,'2')):null;return`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(26,48,80,.3);font-size:.82rem;">
             <span>${s.name}</span>
             <div style="display:flex;gap:4px;">
               <button class="btn btn-xs btn-success" onclick="quickPayStudent('${s.id}','${monthF}')">💰 سدّد</button>
@@ -2587,20 +2621,21 @@ function renderPayments(){
             </div>
           </div>`}).join('')}
         </div>
-        ${lateStudents.length>0?`<button class="btn btn-sm btn-danger" style="width:100%;margin-top:10px;" onclick="sendLateReminders('${monthF}')">📲 إرسال تذكير للكل</button>`:''}
+        ${lateList.length>0?`<button class="btn btn-sm btn-danger" style="width:100%;margin-top:10px;" onclick="sendLateReminders('${monthF}')">📲 إرسال تذكير للكل</button>`:''}
       </div>
     </div>`;
   payCont.innerHTML=tabs;
   if(!payments.length){ payCont.innerHTML+=`<div class="empty-state"><div class="empty-icon">💰</div><div class="empty-txt">لا توجد مدفوعات لهذا الشهر</div></div>`; return; }
   payCont.innerHTML+=`
     <div style="font-size:.9rem;font-weight:700;color:var(--gold2);margin-bottom:10px;">📋 سجل المدفوعات</div>
-    <div class="table-wrapper"><table class="data-table"><thead><tr><th>الطالب</th><th>الشهر</th><th>المبلغ</th><th>التاريخ</th><th>المجموعة</th><th>الحالة</th><th>ملاحظة</th><th>الإجراءات</th></tr></thead><tbody>${
+    <div class="table-wrapper"><table class="data-table"><thead><tr><th>الطالب</th><th>الشهر</th><th>المبلغ</th><th>الخصم</th><th>التاريخ</th><th>المجموعة</th><th>الحالة</th><th>ملاحظة</th><th>الإجراءات</th></tr></thead><tbody>${
     payments.map(p=>{
       const s=DB.students.find(x=>x.id===p.studentId);
       return `<tr>
         <td style="font-weight:700">${s?.name||'—'}</td>
         <td>${p.month||'—'}</td>
         <td style="color:var(--success);font-weight:700">${fmtMoney(p.amount)}</td>
+        <td style="color:var(--warn)">${Number(p.discount)>0?p.discount+'%':'—'}</td>
         <td>${fmtDate(p.date)}</td>
         <td>${getGroupName(p.groupId)||'—'}</td>
         <td><span class="badge ${p.refunded?'badge-red':p.status==='paid'?'badge-green':p.status==='partial'?'badge-warn':'badge-red'}">${p.refunded?'↩️ مُسترجع':p.status==='paid'?'✅ مدفوع':p.status==='partial'?'⚠️ جزئي':'❌ متأخر'}</span></td>
@@ -2615,9 +2650,11 @@ function renderPayments(){
 function quickPayStudent(studentId, month){
   const s=DB.students.find(x=>x.id===studentId); if(!s)return;
   const g=DB.groups.find(x=>x.id===s.groupId);
-  const fee=g?.fee||DB.settings.monthlyFee;
-  if(!confirm(`تسجيل دفع ${s.name} لشهر ${month} بمبلغ ${fmtMoney(fee)}؟`))return;
-  DB.payments.push({id:uid(),studentId,groupId:s.groupId,month,amount:fee,date:today(),status:'paid',note:'',createdBy:currentUser?.name});
+  const baseFee=Number(g?.fee||DB.settings.monthlyFee||0);
+  const disc=Math.min(100,Math.max(0,Number(s.discount)||0));
+  const fee=Math.round(baseFee*(100-disc)/100);
+  if(!confirm(`تسجيل دفع ${s.name} لشهر ${month} بمبلغ ${fmtMoney(fee)}${disc?` (بعد خصم ${disc}%)`:''}؟`))return;
+  DB.payments.push({id:uid(),studentId,groupId:s.groupId,month,amount:fee,fee:baseFee,discount:disc,date:today(),status:'paid',note:'',createdBy:currentUser?.name});
   logActivity('تسجيل دفعة سريعة',`${s.name} - ${month}`);
   saveDB(); renderPayments(); updateBadges(); showToast(`✅ تم تسجيل دفع ${s.name}`,'success');
 }
@@ -2635,74 +2672,95 @@ function sendLateReminders(month){
   sendOne(0);
 }
 
-function filterPayments(v){
-  const payments=DB.payments.filter(p=>{
-    const s=DB.students.find(x=>x.id===p.studentId);
-    return s?.name.includes(v)||s?.phone?.includes(v);
-  });
-  // just re-render with filter (simplified)
-  renderPayments();
-}
+function filterPayments(v){ renderPayments(); }
 
 function openAddPayment(){
-  const students=DB.students.map(s=>`<option value="${s.id}">${s.name} — ${getGroupName(s.groupId)||'بدون مجموعة'}</option>`).join('');
   const groups=DB.groups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
   const d=new Date(); const ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
   document.getElementById('modalTitle').textContent='➕ تسجيل دفعة جديدة';
   document.getElementById('modalBody').innerHTML=`
     <div class="form-row">
       <div class="form-group full">
-        <label class="form-label">📚 المجموعة (اختياري - لتصفية الطلاب)</label>
+        <label class="form-label">📚 المجموعة</label>
         <select class="form-select" id="pGroupFilter" onchange="filterPayStudentsByGroup()">
-          <option value="">كل الطلاب</option>${groups}
+          <option value="">كل المجموعات</option>${groups}
         </select>
       </div>
       <div class="form-group full">
-        <label class="form-label">👤 الطالب *</label>
-        <select class="form-select" id="pStudent" onchange="fillPayGroup()">${students}</select>
+        <label class="form-label">🔍 ابحث باسم الطالب</label>
+        <input class="form-input" id="pStudentSearch" placeholder="اكتب جزء من الاسم أو الكود..." oninput="filterPayStudentsByGroup()" autocomplete="off">
+      </div>
+      <div class="form-group full">
+        <label class="form-label">👤 الاسم * <span id="pCount" style="color:var(--txt3);font-weight:400;font-size:.75rem;"></span></label>
+        <select class="form-select" id="pStudent" size="6" onchange="fillPayGroup()" style="height:auto;"></select>
+      </div>
+      <div class="form-group full">
+        <div id="pInfo" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:.82rem;color:var(--txt2);">اختر الطالب لعرض بيانات الدفع</div>
       </div>
       <div class="form-group"><label class="form-label">📅 الشهر</label><input class="form-input" id="pMonth" type="month" value="${ym}"></div>
-      <div class="form-group"><label class="form-label">💰 المبلغ</label><input class="form-input" id="pAmount" type="number" placeholder="${DB.settings.monthlyFee}"></div>
+      <div class="form-group"><label class="form-label">🏷️ نسبة الخصم %</label><input class="form-input" id="pDiscount" type="number" min="0" max="100" step="1" value="0" oninput="recalcPayAmount()"></div>
+      <div class="form-group"><label class="form-label">💰 المبلغ المدفوع</label><input class="form-input" id="pAmount" type="number" min="0" placeholder="${DB.settings.monthlyFee}"></div>
       <div class="form-group"><label class="form-label">📆 تاريخ الدفع</label><input class="form-input" id="pDate" type="date" value="${today()}"></div>
-      <div class="form-group"><label class="form-label">الحالة</label>
+      <div class="form-group full"><label class="form-label">الحالة</label>
         <select class="form-select" id="pStatus">
           <option value="paid">✅ مدفوع كامل</option>
           <option value="partial">⚠️ دفع جزئي</option>
         </select>
       </div>
-      <div class="form-group full"><label class="form-label">ملاحظة</label><input class="form-input" id="pNote" placeholder="اختياري"></div>
+      <div class="form-group full"><label class="form-label">📝 ملاحظات</label><input class="form-input" id="pNote" placeholder="اختياري"></div>
     </div>`;
   document.getElementById('modalFooter').innerHTML=`<button class="btn btn-primary" onclick="savePayment()">💾 حفظ الدفعة</button><button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>`;
   document.getElementById('modalOverlay').classList.add('show');
-  // Auto-fill amount for first student
-  setTimeout(fillPayGroup, 100);
+  filterPayStudentsByGroup();
+  setTimeout(()=>document.getElementById('pStudentSearch')?.focus(),150);
 }
 
 function filterPayStudentsByGroup(){
-  const gid=document.getElementById('pGroupFilter')?.value;
+  const gid=document.getElementById('pGroupFilter')?.value||'';
+  const q=normAr(document.getElementById('pStudentSearch')?.value||'');
   const sel=document.getElementById('pStudent'); if(!sel)return;
-  const students=gid?DB.students.filter(s=>s.groupId===gid):DB.students;
-  sel.innerHTML=students.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  const prev=sel.value;
+  const list=DB.students.filter(s=>payStudentMatch(s,gid,q));
+  sel.innerHTML=list.map(s=>`<option value="${s.id}">${s.name}${gid?'':' — '+(getGroupName(s.groupId)||'بدون مجموعة')}</option>`).join('');
+  if(list.length){ sel.value=list.find(s=>s.id===prev)?prev:list[0].id; }
+  const c=document.getElementById('pCount'); if(c) c.textContent=`(${list.length} طالب)`;
   fillPayGroup();
 }
 
 function fillPayGroup(){
   const sid=document.getElementById('pStudent')?.value;
   const s=DB.students.find(x=>x.id===sid);
+  const disc=document.getElementById('pDiscount');
+  if(disc) disc.value=s?(Number(s.discount)||0):0;
+  recalcPayAmount();
+}
+
+function recalcPayAmount(){
+  const sid=document.getElementById('pStudent')?.value;
+  const s=DB.students.find(x=>x.id===sid);
+  const info=document.getElementById('pInfo');
   const amt=document.getElementById('pAmount');
-  if(s){
-    const g=DB.groups.find(x=>x.id===s.groupId);
-    if(g&&amt) amt.value=g.fee||DB.settings.monthlyFee;
-  }
+  if(!s){ if(info) info.textContent='لا يوجد طالب مطابق'; if(amt) amt.value=''; return; }
+  const g=DB.groups.find(x=>x.id===s.groupId);
+  const fee=Number(g?.fee||DB.settings.monthlyFee||0);
+  const disc=Math.min(100,Math.max(0,Number(document.getElementById('pDiscount')?.value)||0));
+  const net=Math.round(fee*(100-disc)/100);
+  if(amt) amt.value=net;
+  if(info) info.innerHTML=`📚 ${g?.name||'بدون مجموعة'} &nbsp;|&nbsp; الاشتراك: <b>${fmtMoney(fee)}</b> &nbsp;|&nbsp; الخصم: <b style="color:var(--warn)">${disc}%</b> &nbsp;|&nbsp; المطلوب: <b style="color:var(--success)">${fmtMoney(net)}</b>`;
 }
 
 function savePayment(){
   const sid=document.getElementById('pStudent').value;
-  const amount=Number(document.getElementById('pAmount').value)||DB.settings.monthlyFee;
-  const month=document.getElementById('pMonth').value;
   const s=DB.students.find(x=>x.id===sid);
+  if(!s){ showToast('اختر الطالب أولاً','error'); return; }
+  const g=DB.groups.find(x=>x.id===s.groupId);
+  const fee=Number(g?.fee||DB.settings.monthlyFee||0);
+  const discount=Math.min(100,Math.max(0,Number(document.getElementById('pDiscount')?.value)||0));
+  const amountRaw=document.getElementById('pAmount').value;
+  const amount=amountRaw===''?Math.round(fee*(100-discount)/100):Number(amountRaw);
+  const month=document.getElementById('pMonth').value;
   const status=document.getElementById('pStatus').value;
-  const pay={id:uid(),studentId:sid,groupId:s?.groupId,month,amount,date:document.getElementById('pDate').value,status,note:document.getElementById('pNote').value,createdBy:currentUser?.name};
+  const pay={id:uid(),studentId:sid,groupId:s?.groupId,month,amount,fee,discount,date:document.getElementById('pDate').value,status,note:document.getElementById('pNote').value,createdBy:currentUser?.name};
   DB.payments.push(pay);
   logActivity('تسجيل دفعة',`${s?.name} - ${month} - ${fmtMoney(amount)}`);
 
@@ -6666,6 +6724,7 @@ function showPaymentReceipt(pay, student){
           <span style="color:#555;font-size:.85rem;">نوع الدفعة</span>
           <span style="font-weight:700;color:${pay.status==='paid'?'#27ae60':'#e67e22'}">${pay.status==='paid'?'✅ مدفوع كامل':pay.status==='partial'?'⚠️ جزئي':'—'}</span>
         </div>
+        ${Number(pay.discount)>0?`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;"><span style="color:#555;font-size:.85rem;">الاشتراك / الخصم</span><span style="font-weight:700;color:#e67e22;">${Number(pay.fee||0).toLocaleString('ar-EG')} ${currency} — خصم ${pay.discount}%</span></div>`:''}
         ${pay.note?`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;"><span style="color:#555;font-size:.85rem;">ملاحظات</span><span style="font-size:.82rem;">${pay.note}</span></div>`:''}
         <div style="display:flex;justify-content:space-between;padding:12px 0;margin-top:4px;">
           <span style="font-size:1rem;font-weight:700;color:#000;">المبلغ المدفوع</span>
